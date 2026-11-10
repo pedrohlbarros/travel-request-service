@@ -33,3 +33,6 @@ Uma decisão por arquivo: contexto, decisão, consequências. Numeração sequen
 | [0027](0027-complexidade-cognitiva.md) | Complexidade cognitiva no PHPStan (função ≤ 9, classe ≤ 40) | Aceito |
 | [0028](0028-modelagem-do-dominio-travel-request.md) | Modelagem do domínio TravelRequest: IDs, validações, edição só pelo dono, escopo da fase 01 | Aceito |
 | [0029](0029-organizacao-por-tipo-e-use-cases.md) | Pastas por tipo em todas as camadas; `<Ação>UseCase::execute()` com Input/Output (substitui nomenclatura do 0015) | Aceito |
+| [0030](0030-detalhes-do-identity.md) | Identity: login por e-mail, Argon2id, respostas de auth, AuthenticatedUser em Shared, seeder | Aceito |
+| [0031](0031-problem-details.md) | Critério de `type` próprio e catálogo de Problem Details | Aceito |
+| [0032](0032-fluxo-explicito-e-formato-de-chamadas.md) | Fluxo explícito e formato de chamadas: sem throw em expressão, ≤ 2 níveis de chamada, nomeados no nosso código, um argumento e um `->` por linha (complementa 0026) | Aceito |

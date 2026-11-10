@@ -1,7 +1,7 @@
 # Fase 02 — Identity
 
-- **Status:** Proposto
-- **ADRs:** 0004, 0005, 0008, 0016, 0017
+- **Status:** Em andamento (iniciada em 2026-11-09)
+- **ADRs:** 0004, 0005, 0008, 0016, 0017, 0030, 0031
 
 ## Objetivo
 Usuários e autenticação JWT completos, protegendo a API.
