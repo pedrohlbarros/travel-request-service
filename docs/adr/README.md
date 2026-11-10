@@ -35,4 +35,4 @@ Uma decisão por arquivo: contexto, decisão, consequências. Numeração sequen
 | [0029](0029-organizacao-por-tipo-e-use-cases.md) | Pastas por tipo em todas as camadas; `<Ação>UseCase::execute()` com Input/Output (substitui nomenclatura do 0015) | Aceito |
 | [0030](0030-detalhes-do-identity.md) | Identity: login por e-mail, Argon2id, respostas de auth, AuthenticatedUser em Shared, seeder | Aceito |
 | [0031](0031-problem-details.md) | Critério de `type` próprio e catálogo de Problem Details | Aceito |
-| [0032](0032-fluxo-explicito-e-formato-de-chamadas.md) | Fluxo explícito e formato de chamadas: sem throw em expressão, ≤ 2 níveis de chamada, nomeados no nosso código, um argumento e um `->` por linha (complementa 0026) | Aceito |
+| [0032](0032-fluxo-explicito-e-formato-de-chamadas.md) | Fluxo explícito e formato de chamadas: sem throw em expressão, ≤ 2 níveis de chamada, nomeados no nosso código, layout de argumentos por largura (120) e quantidade (4+), um `->` por linha (complementa 0026) | Aceito |

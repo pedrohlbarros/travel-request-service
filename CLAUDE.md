@@ -61,7 +61,7 @@ O worker é reaproveitado entre requests: nada de estado por request em singleto
 - Docblock só quando o tipo não diz: generics/shapes do PHPStan, `@throws` de exceção de domínio, porquê de regra não óbvia.
 - Estilo: Pint com preset PER. Análise: PHPStan + Larastan nível max, sem baseline; complexidade cognitiva função ≤ 9, classe ≤ 40 ([0027](docs/adr/0027-complexidade-cognitiva.md)). Fronteiras: Deptrac.
 - Código e comentários em inglês.
-- **Fluxo explícito e formato ([0032](docs/adr/0032-fluxo-explicito-e-formato-de-chamadas.md)):** sem `?? throw`/`? : throw` (vira `if`), sem ternário aninhado; no máximo dois níveis de chamada (o de dentro ganha variável); argumentos nomeados em chamadas ao nosso código (framework, libs, PHPUnit e PHP ficam posicionais); com 2+ argumentos, um por linha; com 2+ chamadas encadeadas, um `->` por linha; nos testes, linha em branco antes do bloco de asserts, asserts agrupados no fim. Regras PHPStan próprias em `tools/PHPStan`.
+- **Fluxo explícito e formato ([0032](docs/adr/0032-fluxo-explicito-e-formato-de-chamadas.md)):** sem `?? throw`/`? : throw` (vira `if`), sem ternário aninhado; no máximo dois níveis de chamada (o de dentro ganha variável); argumentos nomeados em chamadas ao nosso código e no schema das migrations (o resto do framework, libs, PHPUnit e PHP ficam posicionais); um argumento por linha com 4+ argumentos ou acima de 120 colunas, senão a chamada fica numa linha; com 2+ chamadas encadeadas, um `->` por linha; nos testes, linha em branco antes do bloco de asserts, asserts agrupados no fim. Regras PHPStan próprias em `tools/PHPStan`.
 - **Código semântico ([0026](docs/adr/0026-codigo-semantico.md)):** sem valor mágico inline (regex/limites em constante com nome), API com nome antes de regex à mão, grupos de regex nomeados, sem nomes curtos/genéricos (`$tmp`, `$data`, `$a`; exceções `$i`, `$id`, `$ip`), booleanos como pergunta, testes com entradas nomeadas e arrange/act/assert. Comentário só explica o porquê.
 
 ## Padrões de API ([0016](docs/adr/0016-convencoes-da-api.md))
@@ -86,7 +86,7 @@ Tudo pelo `Makefile`, rodando dentro do container. O Makefile é o **catálogo c
 
 ## Em aberto
 
-- Nada além do que cada plano lista em "A decidir na fase".
+- Nada além do que cada plano lista em "A decidir na fase" (ex.: fase 06, logs de erros 4xx esperados).
 
 ## Para registrar na entrega (README ou doc linkado)
 
