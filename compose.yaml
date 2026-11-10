@@ -1,0 +1,89 @@
+name: travel-request-service
+
+x-healthcheck: &healthcheck
+  interval: 5s
+  timeout: 5s
+  retries: 30
+  start_period: 10s
+
+services:
+  app:
+    build:
+      context: .
+      target: dev
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    image: travel-request-service/app:dev
+    environment:
+      DB_TEST_DATABASE: ${DB_TEST_DATABASE:-travel_request_testing}
+    ports:
+      - "${FORWARD_APP_PORT:-8000}:8000"
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      mysql: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+      mailpit: { condition: service_healthy }
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8000/health/live"]
+
+  mysql:
+    image: mysql:8.4
+    ports:
+      - "${FORWARD_DB_PORT:-3306}:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${DB_DATABASE:-travel_request}
+      MYSQL_USER: ${DB_USERNAME:-travel_request}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
+      DB_TEST_DATABASE: ${DB_TEST_DATABASE:-travel_request_testing}
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+
+  redis:
+    image: redis:8.10-alpine
+    ports:
+      - "${FORWARD_REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD", "redis-cli", "ping"]
+
+  rabbitmq:
+    image: rabbitmq:4.3-management
+    hostname: rabbitmq
+    ports:
+      - "${FORWARD_RABBITMQ_PORT:-5672}:5672"
+      - "${FORWARD_RABBITMQ_UI_PORT:-15672}:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-travel_request}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-secret}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-/}
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      <<: *healthcheck
+      start_period: 20s
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_port_connectivity"]
+
+  mailpit:
+    image: axllent/mailpit:v1.33
+    ports:
+      - "${FORWARD_MAILPIT_SMTP_PORT:-1025}:1025"
+      - "${FORWARD_MAILPIT_UI_PORT:-8025}:8025"
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD", "/mailpit", "readyz"]
+
+volumes:
+  mysql-data:
+  redis-data:
+  rabbitmq-data:
