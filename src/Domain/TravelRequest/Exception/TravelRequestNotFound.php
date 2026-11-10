@@ -11,10 +11,7 @@ final class TravelRequestNotFound extends BusinessRuleViolation
 {
     public static function withId(TravelRequestId $id): self
     {
-        $message = \sprintf(
-            'Travel request %s was not found.',
-            $id->toString(),
-        );
+        $message = \sprintf('Travel request %s was not found.', $id->toString());
 
         return new self($message);
     }

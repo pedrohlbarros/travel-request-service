@@ -41,10 +41,7 @@ final readonly class CancelTravelRequestUseCase
             cancelledAt: $this->clock->now(),
         );
 
-        $this->travelRequests->update(
-            travelRequest: $travelRequest,
-            loadedVersion: $loadedVersion,
-        );
+        $this->travelRequests->update(travelRequest: $travelRequest, loadedVersion: $loadedVersion);
         $this->events->publish(...$travelRequest->releaseEvents());
 
         return TravelRequestOutput::fromEntity(travelRequest: $travelRequest);

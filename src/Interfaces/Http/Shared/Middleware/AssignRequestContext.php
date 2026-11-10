@@ -32,24 +32,15 @@ final readonly class AssignRequestContext
     public function handle(Request $request, Closure $next): Response
     {
         $requestId = $this->requestIdFor(request: $request);
-        $this->context->add(
-            'request_id',
-            $requestId,
-        );
+        $this->context->add('request_id', $requestId);
 
         $traceId = $this->traceIdFrom(request: $request);
         if ($traceId !== null) {
-            $this->context->add(
-                'trace_id',
-                $traceId,
-            );
+            $this->context->add('trace_id', $traceId);
         }
 
         $response = $next($request);
-        $response->headers->set(
-            self::REQUEST_ID_HEADER,
-            $requestId,
-        );
+        $response->headers->set(self::REQUEST_ID_HEADER, $requestId);
 
         return $response;
     }
@@ -58,10 +49,7 @@ final readonly class AssignRequestContext
     {
         $clientRequestId = $request->headers->get(self::REQUEST_ID_HEADER);
 
-        if ($clientRequestId !== null && preg_match(
-            self::SAFE_CLIENT_REQUEST_ID,
-            $clientRequestId,
-        ) === 1) {
+        if ($clientRequestId !== null && preg_match(self::SAFE_CLIENT_REQUEST_ID, $clientRequestId) === 1) {
             return $clientRequestId;
         }
 
@@ -73,11 +61,7 @@ final readonly class AssignRequestContext
     {
         $traceparent = $request->headers->get(self::TRACEPARENT_HEADER);
 
-        if ($traceparent === null || preg_match(
-            self::W3C_TRACEPARENT,
-            $traceparent,
-            $traceparentParts,
-        ) !== 1) {
+        if ($traceparent === null || preg_match(self::W3C_TRACEPARENT, $traceparent, $traceparentParts) !== 1) {
             return null;
         }
 

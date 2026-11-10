@@ -36,10 +36,7 @@ final readonly class TravelPeriod
             );
         }
 
-        return new self(
-            departureDate: $departureDay,
-            returnDate: $returnDay,
-        );
+        return new self(departureDate: $departureDay, returnDate: $returnDay);
     }
 
     /**
@@ -60,9 +57,6 @@ final readonly class TravelPeriod
 
     private static function calendarDayOf(DateTimeImmutable $moment): DateTimeImmutable
     {
-        return new DateTimeImmutable(
-            $moment->format(self::CALENDAR_DATE),
-            new DateTimeZone(self::CALENDAR_TIMEZONE),
-        );
+        return new DateTimeImmutable($moment->format(self::CALENDAR_DATE), new DateTimeZone(self::CALENDAR_TIMEZONE));
     }
 }

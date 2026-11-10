@@ -36,10 +36,7 @@ final class HealthEndpointsTest extends LaravelTestCase
             FixedHealthCheck::healthy(name: 'mysql'),
             FixedHealthCheck::unhealthy(name: 'redis'),
         ]);
-        $this->app->instance(
-            CheckReadinessUseCase::class,
-            $readinessWithRedisDown,
-        );
+        $this->app->instance(CheckReadinessUseCase::class, $readinessWithRedisDown);
 
         $response = $this->getJson('/health/ready');
 
@@ -54,9 +51,6 @@ final class HealthEndpointsTest extends LaravelTestCase
     {
         $registeredChecks = iterator_to_array($this->app->tagged(SharedServiceProvider::HEALTH_CHECKS_TAG));
 
-        self::assertCount(
-            3,
-            $registeredChecks,
-        );
+        self::assertCount(3, $registeredChecks);
     }
 }

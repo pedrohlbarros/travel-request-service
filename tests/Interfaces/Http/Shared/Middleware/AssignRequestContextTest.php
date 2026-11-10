@@ -43,100 +43,55 @@ final class AssignRequestContextTest extends LaravelTestCase
 
         $generatedRequestId = $response->headers->get('X-Request-Id');
 
-        self::assertTrue(Str::isUuid(
-            $generatedRequestId,
-            self::UUID_VERSION_7,
-        ));
-        $response->assertJsonPath(
-            'request_id',
-            $generatedRequestId,
-        );
+        self::assertTrue(Str::isUuid($generatedRequestId, self::UUID_VERSION_7));
+        $response->assertJsonPath('request_id', $generatedRequestId);
     }
 
     public function test_KeepsSafeRequestIdFromClient(): void
     {
         $clientRequestId = 'client-req_123.abc';
 
-        $response = $this->getJson(
-            self::CONTEXT_PROBE_URI,
-            ['X-Request-Id' => $clientRequestId],
-        );
+        $response = $this->getJson(self::CONTEXT_PROBE_URI, ['X-Request-Id' => $clientRequestId]);
 
-        $response->assertHeader(
-            'X-Request-Id',
-            $clientRequestId,
-        );
-        $response->assertJsonPath(
-            'request_id',
-            $clientRequestId,
-        );
+        $response->assertHeader('X-Request-Id', $clientRequestId);
+        $response->assertJsonPath('request_id', $clientRequestId);
     }
 
     public function test_ReplacesUnsafeRequestIdFromClient(): void
     {
         $unsafeRequestIds = [
-            'tooShort' => str_repeat(
-                'a',
-                self::SHORTEST_ACCEPTED_REQUEST_ID - 1,
-            ),
-            'tooLong' => str_repeat(
-                'a',
-                self::LONGEST_ACCEPTED_REQUEST_ID + 1,
-            ),
+            'tooShort' => str_repeat('a', self::SHORTEST_ACCEPTED_REQUEST_ID - 1),
+            'tooLong' => str_repeat('a', self::LONGEST_ACCEPTED_REQUEST_ID + 1),
             'headerInjection' => "evil\nheader",
             'whitespace' => 'has space here',
         ];
 
         foreach ($unsafeRequestIds as $unsafeRequestId) {
-            $response = $this->getJson(
-                self::CONTEXT_PROBE_URI,
-                ['X-Request-Id' => $unsafeRequestId],
-            );
+            $response = $this->getJson(self::CONTEXT_PROBE_URI, ['X-Request-Id' => $unsafeRequestId]);
 
-            self::assertNotSame(
-                $unsafeRequestId,
-                $response->headers->get('X-Request-Id'),
-            );
+            self::assertNotSame($unsafeRequestId, $response->headers->get('X-Request-Id'));
         }
     }
 
     public function test_AcceptsRequestIdAtLengthBoundaries(): void
     {
         $boundaryRequestIds = [
-            str_repeat(
-                'a',
-                self::SHORTEST_ACCEPTED_REQUEST_ID,
-            ),
-            str_repeat(
-                'b',
-                self::LONGEST_ACCEPTED_REQUEST_ID,
-            ),
+            str_repeat('a', self::SHORTEST_ACCEPTED_REQUEST_ID),
+            str_repeat('b', self::LONGEST_ACCEPTED_REQUEST_ID),
         ];
 
         foreach ($boundaryRequestIds as $boundaryRequestId) {
-            $response = $this->getJson(
-                self::CONTEXT_PROBE_URI,
-                ['X-Request-Id' => $boundaryRequestId],
-            );
+            $response = $this->getJson(self::CONTEXT_PROBE_URI, ['X-Request-Id' => $boundaryRequestId]);
 
-            $response->assertHeader(
-                'X-Request-Id',
-                $boundaryRequestId,
-            );
+            $response->assertHeader('X-Request-Id', $boundaryRequestId);
         }
     }
 
     public function test_ExtractsTraceIdFromValidTraceparent(): void
     {
-        $response = $this->getJson(
-            self::CONTEXT_PROBE_URI,
-            ['traceparent' => self::VALID_TRACEPARENT],
-        );
+        $response = $this->getJson(self::CONTEXT_PROBE_URI, ['traceparent' => self::VALID_TRACEPARENT]);
 
-        $response->assertJsonPath(
-            'trace_id',
-            self::TRACE_ID_OF_VALID_TRACEPARENT,
-        );
+        $response->assertJsonPath('trace_id', self::TRACE_ID_OF_VALID_TRACEPARENT);
     }
 
     public function test_IgnoresInvalidTraceparent(): void
@@ -151,15 +106,9 @@ final class AssignRequestContextTest extends LaravelTestCase
         ];
 
         foreach ($invalidTraceparents as $invalidTraceparent) {
-            $response = $this->getJson(
-                self::CONTEXT_PROBE_URI,
-                ['traceparent' => $invalidTraceparent],
-            );
+            $response = $this->getJson(self::CONTEXT_PROBE_URI, ['traceparent' => $invalidTraceparent]);
 
-            $response->assertJsonPath(
-                'trace_id',
-                null,
-            );
+            $response->assertJsonPath('trace_id', null);
         }
     }
 }

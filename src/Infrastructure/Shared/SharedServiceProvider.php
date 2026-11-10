@@ -25,26 +25,11 @@ final class SharedServiceProvider extends ServiceProvider
                 $config = $app->make(Config::class);
 
                 return new RabbitMqConnectionFactory(
-                    host: self::stringFrom(
-                        config: $config,
-                        key: 'rabbitmq.host',
-                    ),
-                    port: self::intFrom(
-                        config: $config,
-                        key: 'rabbitmq.port',
-                    ),
-                    user: self::stringFrom(
-                        config: $config,
-                        key: 'rabbitmq.user',
-                    ),
-                    password: self::stringFrom(
-                        config: $config,
-                        key: 'rabbitmq.password',
-                    ),
-                    vhost: self::stringFrom(
-                        config: $config,
-                        key: 'rabbitmq.vhost',
-                    ),
+                    host: self::stringFrom(config: $config, key: 'rabbitmq.host'),
+                    port: self::intFrom(config: $config, key: 'rabbitmq.port'),
+                    user: self::stringFrom(config: $config, key: 'rabbitmq.user'),
+                    password: self::stringFrom(config: $config, key: 'rabbitmq.password'),
+                    vhost: self::stringFrom(config: $config, key: 'rabbitmq.vhost'),
                 );
             },
         );

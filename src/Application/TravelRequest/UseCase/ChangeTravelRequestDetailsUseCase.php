@@ -45,17 +45,11 @@ final readonly class ChangeTravelRequestDetailsUseCase
         $travelRequest->changeDetails(
             editorId: UserId::fromString(id: $input->editorId),
             destination: Destination::fromString(name: $input->destination),
-            period: TravelPeriod::between(
-                departureDate: $input->departureDate,
-                returnDate: $input->returnDate,
-            ),
+            period: TravelPeriod::between(departureDate: $input->departureDate, returnDate: $input->returnDate),
             changedAt: $this->clock->now(),
         );
 
-        $this->travelRequests->update(
-            travelRequest: $travelRequest,
-            loadedVersion: $loadedVersion,
-        );
+        $this->travelRequests->update(travelRequest: $travelRequest, loadedVersion: $loadedVersion);
 
         return TravelRequestOutput::fromEntity(travelRequest: $travelRequest);
     }

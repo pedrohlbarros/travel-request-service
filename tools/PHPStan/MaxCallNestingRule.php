@@ -54,10 +54,7 @@ final readonly class MaxCallNestingRule implements Rule
         $deepest = 0;
 
         foreach (CallSyntax::argumentsOf(call: $call) as $argument) {
-            $deepest = max(
-                $deepest,
-                $this->callDepthOf(node: $argument->value),
-            );
+            $deepest = max($deepest, $this->callDepthOf(node: $argument->value));
         }
 
         return $deepest;
@@ -70,10 +67,7 @@ final readonly class MaxCallNestingRule implements Rule
         }
 
         if ($node instanceof CallLike) {
-            return max(
-                1 + $this->deepestCallAmongArgumentsOf(call: $node),
-                $this->depthOfChainedTarget(call: $node),
-            );
+            return max(1 + $this->deepestCallAmongArgumentsOf(call: $node), $this->depthOfChainedTarget(call: $node));
         }
 
         return $this->deepestChildDepth(node: $node);
@@ -95,10 +89,7 @@ final readonly class MaxCallNestingRule implements Rule
         foreach (get_object_vars($node) as $children) {
             foreach (\is_array($children) ? $children : [$children] as $child) {
                 if ($child instanceof Node) {
-                    $deepest = max(
-                        $deepest,
-                        $this->callDepthOf(node: $child),
-                    );
+                    $deepest = max($deepest, $this->callDepthOf(node: $child));
                 }
             }
         }

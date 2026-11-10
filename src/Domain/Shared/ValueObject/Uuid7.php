@@ -21,10 +21,7 @@ final readonly class Uuid7
     {
         $lowercased = strtolower($candidate);
 
-        if (preg_match(
-            self::CANONICAL_UUID_V7,
-            $lowercased,
-        ) !== 1) {
+        if (preg_match(self::CANONICAL_UUID_V7, $lowercased) !== 1) {
             throw InvalidIdentifier::notUuid7(candidate: $candidate);
         }
 

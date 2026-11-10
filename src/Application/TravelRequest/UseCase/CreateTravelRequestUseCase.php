@@ -38,10 +38,7 @@ final readonly class CreateTravelRequestUseCase
             id: $travelRequestId,
             requesterId: UserId::fromString(id: $input->requesterId),
             destination: Destination::fromString(name: $input->destination),
-            period: TravelPeriod::between(
-                departureDate: $input->departureDate,
-                returnDate: $input->returnDate,
-            ),
+            period: TravelPeriod::between(departureDate: $input->departureDate, returnDate: $input->returnDate),
             requestedAt: $this->clock->now(),
         );
 

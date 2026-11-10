@@ -39,42 +39,15 @@ final class GetTravelRequestUseCaseTest extends TestCase
             isViewerAdmin: self::AS_USER,
         ));
 
-        self::assertSame(
-            Mother::TRAVEL_REQUEST_ID,
-            $found->id,
-        );
-        self::assertSame(
-            Mother::REQUESTER_ID,
-            $found->requesterId,
-        );
-        self::assertSame(
-            Mother::DESTINATION,
-            $found->destination,
-        );
-        self::assertEquals(
-            Mother::moment(moment: Mother::DEPARTURE_DATE),
-            $found->departureDate,
-        );
-        self::assertEquals(
-            Mother::moment(moment: Mother::RETURN_DATE),
-            $found->returnDate,
-        );
-        self::assertSame(
-            TravelRequestStatus::Requested,
-            $found->status,
-        );
-        self::assertSame(
-            TravelRequest::FIRST_VERSION,
-            $found->version,
-        );
-        self::assertEquals(
-            Mother::moment(moment: Mother::NOW),
-            $found->createdAt,
-        );
-        self::assertEquals(
-            Mother::moment(moment: Mother::NOW),
-            $found->updatedAt,
-        );
+        self::assertSame(Mother::TRAVEL_REQUEST_ID, $found->id);
+        self::assertSame(Mother::REQUESTER_ID, $found->requesterId);
+        self::assertSame(Mother::DESTINATION, $found->destination);
+        self::assertEquals(Mother::moment(moment: Mother::DEPARTURE_DATE), $found->departureDate);
+        self::assertEquals(Mother::moment(moment: Mother::RETURN_DATE), $found->returnDate);
+        self::assertSame(TravelRequestStatus::Requested, $found->status);
+        self::assertSame(TravelRequest::FIRST_VERSION, $found->version);
+        self::assertEquals(Mother::moment(moment: Mother::NOW), $found->createdAt);
+        self::assertEquals(Mother::moment(moment: Mother::NOW), $found->updatedAt);
         self::assertNull($found->decidedBy);
     }
 
@@ -88,18 +61,9 @@ final class GetTravelRequestUseCaseTest extends TestCase
             isViewerAdmin: self::AS_USER,
         ));
 
-        self::assertSame(
-            TravelRequestStatus::Approved,
-            $found->status,
-        );
-        self::assertSame(
-            Mother::ADMIN_ID,
-            $found->decidedBy,
-        );
-        self::assertEquals(
-            Mother::moment(moment: Mother::LATER),
-            $found->updatedAt,
-        );
+        self::assertSame(TravelRequestStatus::Approved, $found->status);
+        self::assertSame(Mother::ADMIN_ID, $found->decidedBy);
+        self::assertEquals(Mother::moment(moment: Mother::LATER), $found->updatedAt);
     }
 
     public function test_AdminSeesAnyTravelRequest(): void
@@ -112,10 +76,7 @@ final class GetTravelRequestUseCaseTest extends TestCase
             isViewerAdmin: self::AS_ADMIN,
         ));
 
-        self::assertSame(
-            Mother::TRAVEL_REQUEST_ID,
-            $found->id,
-        );
+        self::assertSame(Mother::TRAVEL_REQUEST_ID, $found->id);
     }
 
     public function test_UserCannotSeeSomeoneElsesTravelRequest(): void

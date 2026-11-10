@@ -17,32 +17,17 @@ final class TravelPeriodTest extends TestCase
 
     public function test_KeepsDepartureAndReturnDates(): void
     {
-        $period = TravelRequestMother::period(
-            departureDate: '2026-12-01',
-            returnDate: '2026-12-05',
-        );
+        $period = TravelRequestMother::period(departureDate: '2026-12-01', returnDate: '2026-12-05');
 
-        self::assertSame(
-            '2026-12-01',
-            $period->departureDate->format(self::CALENDAR_DATE),
-        );
-        self::assertSame(
-            '2026-12-05',
-            $period->returnDate->format(self::CALENDAR_DATE),
-        );
+        self::assertSame('2026-12-01', $period->departureDate->format(self::CALENDAR_DATE));
+        self::assertSame('2026-12-05', $period->returnDate->format(self::CALENDAR_DATE));
     }
 
     public function test_AllowsReturnOnDepartureDay(): void
     {
-        $period = TravelRequestMother::period(
-            departureDate: '2026-12-01',
-            returnDate: '2026-12-01',
-        );
+        $period = TravelRequestMother::period(departureDate: '2026-12-01', returnDate: '2026-12-01');
 
-        self::assertEquals(
-            $period->departureDate,
-            $period->returnDate,
-        );
+        self::assertEquals($period->departureDate, $period->returnDate);
     }
 
     public function test_RejectsReturnBeforeDeparture(): void
@@ -50,10 +35,7 @@ final class TravelPeriodTest extends TestCase
         $this->expectException(InvalidTravelPeriod::class);
         $this->expectExceptionMessageIs('Return date 2026-11-30 is before departure date 2026-12-01.');
 
-        TravelRequestMother::period(
-            departureDate: '2026-12-01',
-            returnDate: '2026-11-30',
-        );
+        TravelRequestMother::period(departureDate: '2026-12-01', returnDate: '2026-11-30');
     }
 
     public function test_KeepsOnlyTheCalendarDateAtMidnightUtc(): void
@@ -62,24 +44,15 @@ final class TravelPeriodTest extends TestCase
             '2026-12-01 23:30:00',
             new DateTimeZone('America/Sao_Paulo'),
         );
-        $returnInTheMorningInTokyo = new DateTimeImmutable(
-            '2026-12-05 07:15:00',
-            new DateTimeZone('Asia/Tokyo'),
-        );
+        $returnInTheMorningInTokyo = new DateTimeImmutable('2026-12-05 07:15:00', new DateTimeZone('Asia/Tokyo'));
 
         $period = TravelPeriod::between(
             departureDate: $departureLateAtNightInSaoPaulo,
             returnDate: $returnInTheMorningInTokyo,
         );
 
-        self::assertSame(
-            '2026-12-01T00:00:00+00:00',
-            $period->departureDate->format(DATE_ATOM),
-        );
-        self::assertSame(
-            '2026-12-05T00:00:00+00:00',
-            $period->returnDate->format(DATE_ATOM),
-        );
+        self::assertSame('2026-12-01T00:00:00+00:00', $period->departureDate->format(DATE_ATOM));
+        self::assertSame('2026-12-05T00:00:00+00:00', $period->returnDate->format(DATE_ATOM));
     }
 
     public function test_SameCalendarDayIsNotReturnBeforeDepartureEvenWithEarlierTime(): void
@@ -87,23 +60,14 @@ final class TravelPeriodTest extends TestCase
         $departureInTheEvening = TravelRequestMother::moment(moment: '2026-12-01 20:00:00');
         $returnInTheMorning = TravelRequestMother::moment(moment: '2026-12-01 06:00:00');
 
-        $period = TravelPeriod::between(
-            departureDate: $departureInTheEvening,
-            returnDate: $returnInTheMorning,
-        );
+        $period = TravelPeriod::between(departureDate: $departureInTheEvening, returnDate: $returnInTheMorning);
 
-        self::assertEquals(
-            $period->departureDate,
-            $period->returnDate,
-        );
+        self::assertEquals($period->departureDate, $period->returnDate);
     }
 
     public function test_AcceptsDepartureToday(): void
     {
-        $period = TravelRequestMother::period(
-            departureDate: '2026-11-09',
-            returnDate: '2026-11-10',
-        );
+        $period = TravelRequestMother::period(departureDate: '2026-11-09', returnDate: '2026-11-10');
 
         $period->assertDepartsOnOrAfterDayOf(moment: TravelRequestMother::moment(moment: '2026-11-09 23:59:59'));
 
@@ -112,10 +76,7 @@ final class TravelPeriodTest extends TestCase
 
     public function test_RejectsDepartureBeforeToday(): void
     {
-        $period = TravelRequestMother::period(
-            departureDate: '2026-11-08',
-            returnDate: '2026-11-10',
-        );
+        $period = TravelRequestMother::period(departureDate: '2026-11-08', returnDate: '2026-11-10');
 
         $this->expectException(InvalidTravelPeriod::class);
         $this->expectExceptionMessageIs('Departure date 2026-11-08 is before today (2026-11-09).');
@@ -125,14 +86,8 @@ final class TravelPeriodTest extends TestCase
 
     public function test_TodayIsTheUtcCalendarDay(): void
     {
-        $period = TravelRequestMother::period(
-            departureDate: '2026-11-09',
-            returnDate: '2026-11-10',
-        );
-        $alreadyTomorrowInUtc = new DateTimeImmutable(
-            '2026-11-09 22:00:00',
-            new DateTimeZone('America/Sao_Paulo'),
-        );
+        $period = TravelRequestMother::period(departureDate: '2026-11-09', returnDate: '2026-11-10');
+        $alreadyTomorrowInUtc = new DateTimeImmutable('2026-11-09 22:00:00', new DateTimeZone('America/Sao_Paulo'));
 
         $this->expectException(InvalidTravelPeriod::class);
         $this->expectExceptionMessageIsOrContains('before today (2026-11-10)');

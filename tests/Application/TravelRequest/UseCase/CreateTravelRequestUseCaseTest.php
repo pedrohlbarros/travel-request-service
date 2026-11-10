@@ -49,38 +49,14 @@ final class CreateTravelRequestUseCaseTest extends TestCase
 
         $stored = $this->travelRequests->get(id: TravelRequestId::fromString(id: $created->id));
 
-        self::assertEquals(
-            TravelRequestOutput::fromEntity(travelRequest: $stored),
-            $created,
-        );
-        self::assertSame(
-            SequentialIdentifierGenerator::nth(sequence: 1),
-            $created->id,
-        );
-        self::assertSame(
-            Mother::REQUESTER_ID,
-            $stored->requesterId->toString(),
-        );
-        self::assertSame(
-            Mother::DESTINATION,
-            $stored->destination->name,
-        );
-        self::assertEquals(
-            Mother::period(),
-            $stored->period,
-        );
-        self::assertSame(
-            TravelRequestStatus::Requested,
-            $stored->status,
-        );
-        self::assertSame(
-            TravelRequest::FIRST_VERSION,
-            $stored->version,
-        );
-        self::assertEquals(
-            Mother::moment(moment: Mother::NOW),
-            $stored->createdAt,
-        );
+        self::assertEquals(TravelRequestOutput::fromEntity(travelRequest: $stored), $created);
+        self::assertSame(SequentialIdentifierGenerator::nth(sequence: 1), $created->id);
+        self::assertSame(Mother::REQUESTER_ID, $stored->requesterId->toString());
+        self::assertSame(Mother::DESTINATION, $stored->destination->name);
+        self::assertEquals(Mother::period(), $stored->period);
+        self::assertSame(TravelRequestStatus::Requested, $stored->status);
+        self::assertSame(TravelRequest::FIRST_VERSION, $stored->version);
+        self::assertEquals(Mother::moment(moment: Mother::NOW), $stored->createdAt);
     }
 
     public function test_EachTravelRequestGetsItsOwnId(): void
@@ -95,10 +71,7 @@ final class CreateTravelRequestUseCaseTest extends TestCase
         $first = $this->useCase->execute(input: $input);
         $second = $this->useCase->execute(input: $input);
 
-        self::assertNotSame(
-            $first->id,
-            $second->id,
-        );
+        self::assertNotSame($first->id, $second->id);
     }
 
     public function test_RejectsInvalidRequesterId(): void

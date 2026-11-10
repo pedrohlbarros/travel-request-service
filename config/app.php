@@ -2,13 +2,7 @@
 
 declare(strict_types=1);
 
-$previousKeys = explode(
-    ',',
-    (string) env(
-        'APP_PREVIOUS_KEYS',
-        '',
-    ),
-);
+$previousKeys = explode(',', (string) env('APP_PREVIOUS_KEYS', ''));
 
 return [
 
@@ -23,10 +17,7 @@ return [
     |
     */
 
-    'name' => env(
-        'APP_NAME',
-        'Laravel',
-    ),
+    'name' => env('APP_NAME', 'Laravel'),
 
     /*
     |--------------------------------------------------------------------------
@@ -39,10 +30,7 @@ return [
     |
     */
 
-    'env' => env(
-        'APP_ENV',
-        'production',
-    ),
+    'env' => env('APP_ENV', 'production'),
 
     /*
     |--------------------------------------------------------------------------
@@ -55,10 +43,7 @@ return [
     |
     */
 
-    'debug' => (bool) env(
-        'APP_DEBUG',
-        false,
-    ),
+    'debug' => (bool) env('APP_DEBUG', false),
 
     /*
     |--------------------------------------------------------------------------
@@ -71,10 +56,7 @@ return [
     |
     */
 
-    'url' => env(
-        'APP_URL',
-        'http://localhost',
-    ),
+    'url' => env('APP_URL', 'http://localhost'),
 
     /*
     |--------------------------------------------------------------------------
@@ -100,20 +82,11 @@ return [
     |
     */
 
-    'locale' => env(
-        'APP_LOCALE',
-        'en',
-    ),
+    'locale' => env('APP_LOCALE', 'en'),
 
-    'fallback_locale' => env(
-        'APP_FALLBACK_LOCALE',
-        'en',
-    ),
+    'fallback_locale' => env('APP_FALLBACK_LOCALE', 'en'),
 
-    'faker_locale' => env(
-        'APP_FAKER_LOCALE',
-        'en_US',
-    ),
+    'faker_locale' => env('APP_FAKER_LOCALE', 'en_US'),
 
     /*
     |--------------------------------------------------------------------------
@@ -131,10 +104,7 @@ return [
     'key' => env('APP_KEY'),
 
     'previous_keys' => [
-        ...array_filter(
-            $previousKeys,
-            static fn(string $key): bool => $key !== '',
-        ),
+        ...array_filter($previousKeys, static fn(string $key): bool => $key !== ''),
     ],
 
     /*
@@ -151,14 +121,8 @@ return [
     */
 
     'maintenance' => [
-        'driver' => env(
-            'APP_MAINTENANCE_DRIVER',
-            'file',
-        ),
-        'store' => env(
-            'APP_MAINTENANCE_STORE',
-            'database',
-        ),
+        'driver' => env('APP_MAINTENANCE_DRIVER', 'file'),
+        'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
 ];

@@ -34,10 +34,7 @@ final class TravelRequestMother
 
     public static function moment(string $moment): DateTimeImmutable
     {
-        return new DateTimeImmutable(
-            $moment,
-            new DateTimeZone('UTC'),
-        );
+        return new DateTimeImmutable($moment, new DateTimeZone('UTC'));
     }
 
     public static function period(string $departureDate = self::DEPARTURE_DATE, string $returnDate = self::RETURN_DATE): TravelPeriod

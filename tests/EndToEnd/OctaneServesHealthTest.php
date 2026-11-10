@@ -19,18 +19,9 @@ final class OctaneServesHealthTest extends LaravelTestCase
             ->acceptJson()
             ->get(self::BASE_URL . '/health/ready');
 
-        self::assertSame(
-            200,
-            $response->status(),
-        );
-        self::assertSame(
-            'ok',
-            $response->json('status'),
-        );
-        self::assertNotSame(
-            '',
-            $response->header('X-Request-Id'),
-        );
+        self::assertSame(200, $response->status());
+        self::assertSame('ok', $response->json('status'));
+        self::assertNotSame('', $response->header('X-Request-Id'));
     }
 
     public function test_OctaneDoesNotLeakRequestIdBetweenRequests(): void
@@ -43,13 +34,7 @@ final class OctaneServesHealthTest extends LaravelTestCase
         $secondResponse = Http::timeout(self::TIMEOUT_SECONDS)
             ->get(self::BASE_URL . '/health/live');
 
-        self::assertSame(
-            $clientRequestId,
-            $firstResponse->header('X-Request-Id'),
-        );
-        self::assertNotSame(
-            $clientRequestId,
-            $secondResponse->header('X-Request-Id'),
-        );
+        self::assertSame($clientRequestId, $firstResponse->header('X-Request-Id'));
+        self::assertNotSame($clientRequestId, $secondResponse->header('X-Request-Id'));
     }
 }

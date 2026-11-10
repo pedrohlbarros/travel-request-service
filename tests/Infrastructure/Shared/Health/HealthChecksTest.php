@@ -21,20 +21,14 @@ final class HealthChecksTest extends LaravelTestCase
     {
         $check = $this->app->make(MySqlHealthCheck::class);
 
-        self::assertSame(
-            'mysql',
-            $check->name(),
-        );
+        self::assertSame('mysql', $check->name());
         self::assertTrue($check->isHealthy());
     }
 
     public function test_MySqlCheckIsUnhealthyWhenDatabaseIsUnreachable(): void
     {
         $this->app->make('config')
-            ->set(
-                'database.connections.mysql.host',
-                self::UNREACHABLE_HOST,
-            );
+            ->set('database.connections.mysql.host', self::UNREACHABLE_HOST);
         $this->app->make('db')
             ->purge('mysql');
         $check = new MySqlHealthCheck(
@@ -51,26 +45,17 @@ final class HealthChecksTest extends LaravelTestCase
     {
         $check = $this->app->make(RedisHealthCheck::class);
 
-        self::assertSame(
-            'redis',
-            $check->name(),
-        );
+        self::assertSame('redis', $check->name());
         self::assertTrue($check->isHealthy());
     }
 
     public function test_RedisCheckIsUnhealthyWhenRedisIsUnreachable(): void
     {
         $this->app->make('config')
-            ->set(
-                'database.redis.default.host',
-                self::UNREACHABLE_HOST,
-            );
+            ->set('database.redis.default.host', self::UNREACHABLE_HOST);
         $this->app->make('redis')
             ->purge('default');
-        $check = new RedisHealthCheck(
-            redis: $this->app->make(RedisFactory::class),
-            logger: new NullLogger(),
-        );
+        $check = new RedisHealthCheck(redis: $this->app->make(RedisFactory::class), logger: new NullLogger());
 
         $isHealthy = $check->isHealthy();
 
@@ -81,10 +66,7 @@ final class HealthChecksTest extends LaravelTestCase
     {
         $check = $this->app->make(RabbitMqHealthCheck::class);
 
-        self::assertSame(
-            'rabbitmq',
-            $check->name(),
-        );
+        self::assertSame('rabbitmq', $check->name());
         self::assertTrue($check->isHealthy());
     }
 

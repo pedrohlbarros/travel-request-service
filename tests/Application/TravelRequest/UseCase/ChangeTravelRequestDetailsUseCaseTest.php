@@ -34,10 +34,7 @@ final class ChangeTravelRequestDetailsUseCaseTest extends TestCase
     {
         $clock = new FrozenClock(frozenAt: Mother::moment(moment: Mother::LATER));
         $this->travelRequests = new InMemoryTravelRequestRepository();
-        $this->useCase = new ChangeTravelRequestDetailsUseCase(
-            travelRequests: $this->travelRequests,
-            clock: $clock,
-        );
+        $this->useCase = new ChangeTravelRequestDetailsUseCase(travelRequests: $this->travelRequests, clock: $clock);
     }
 
     public function test_RequesterChangesDestinationAndDates(): void
@@ -51,29 +48,14 @@ final class ChangeTravelRequestDetailsUseCaseTest extends TestCase
 
         $stored = $this->storedTravelRequest();
 
+        self::assertEquals(TravelRequestOutput::fromEntity(travelRequest: $stored), $changed);
+        self::assertSame(self::NEW_DESTINATION, $stored->destination->name);
         self::assertEquals(
-            TravelRequestOutput::fromEntity(travelRequest: $stored),
-            $changed,
-        );
-        self::assertSame(
-            self::NEW_DESTINATION,
-            $stored->destination->name,
-        );
-        self::assertEquals(
-            Mother::period(
-                departureDate: self::NEW_DEPARTURE_DATE,
-                returnDate: self::NEW_RETURN_DATE,
-            ),
+            Mother::period(departureDate: self::NEW_DEPARTURE_DATE, returnDate: self::NEW_RETURN_DATE),
             $stored->period,
         );
-        self::assertSame(
-            TravelRequest::FIRST_VERSION + 1,
-            $stored->version,
-        );
-        self::assertEquals(
-            Mother::moment(moment: Mother::LATER),
-            $stored->updatedAt,
-        );
+        self::assertSame(TravelRequest::FIRST_VERSION + 1, $stored->version);
+        self::assertEquals(Mother::moment(moment: Mother::LATER), $stored->updatedAt);
     }
 
     public function test_RejectsStaleExpectedVersion(): void

@@ -12,11 +12,7 @@ final class TravelRequestNotOwned extends BusinessRuleViolation
 {
     public static function by(TravelRequestId $id, UserId $userId): self
     {
-        $message = \sprintf(
-            'Travel request %s does not belong to user %s.',
-            $id->toString(),
-            $userId->toString(),
-        );
+        $message = \sprintf('Travel request %s does not belong to user %s.', $id->toString(), $userId->toString());
 
         return new self($message);
     }

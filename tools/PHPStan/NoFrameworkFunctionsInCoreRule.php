@@ -35,24 +35,15 @@ final readonly class NoFrameworkFunctionsInCoreRule implements Rule
 
     public function processNode(Node $node, Scope $scope): array
     {
-        if (!$node->name instanceof Name || preg_match(
-            self::CORE_PATH_PATTERN,
-            $scope->getFile(),
-        ) !== 1) {
+        if (!$node->name instanceof Name || preg_match(self::CORE_PATH_PATTERN, $scope->getFile()) !== 1) {
             return [];
         }
 
-        if (!$this->reflectionProvider->hasFunction(
-            $node->name,
-            $scope,
-        )) {
+        if (!$this->reflectionProvider->hasFunction($node->name, $scope)) {
             return [];
         }
 
-        $function = $this->reflectionProvider->getFunction(
-            $node->name,
-            $scope,
-        );
+        $function = $this->reflectionProvider->getFunction($node->name, $scope);
         $definedIn = $function->getFileName();
         $resolved = $definedIn === null ? false : realpath($definedIn);
 

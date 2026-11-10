@@ -15,10 +15,6 @@ final readonly class ReadinessOutput
 
     public function isReady(): bool
     {
-        return !\in_array(
-            false,
-            $this->checks,
-            true,
-        );
+        return !\in_array(false, $this->checks, true);
     }
 }

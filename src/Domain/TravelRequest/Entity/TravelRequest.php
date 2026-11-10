@@ -113,17 +113,11 @@ final class TravelRequest
         DateTimeImmutable $changedAt,
     ): void {
         if (! $this->requesterId->equals(other: $editorId)) {
-            throw TravelRequestNotOwned::by(
-                id: $this->id,
-                userId: $editorId,
-            );
+            throw TravelRequestNotOwned::by(id: $this->id, userId: $editorId);
         }
 
         if ($this->status !== TravelRequestStatus::Requested) {
-            throw TravelRequestNotEditable::inStatus(
-                id: $this->id,
-                status: $this->status,
-            );
+            throw TravelRequestNotEditable::inStatus(id: $this->id, status: $this->status);
         }
 
         $period->assertDepartsOnOrAfterDayOf(moment: $changedAt);
@@ -138,11 +132,7 @@ final class TravelRequest
      */
     public function approve(UserId $approverId, DateTimeImmutable $approvedAt): void
     {
-        $this->decide(
-            targetStatus: TravelRequestStatus::Approved,
-            deciderId: $approverId,
-            decidedAt: $approvedAt,
-        );
+        $this->decide(targetStatus: TravelRequestStatus::Approved, deciderId: $approverId, decidedAt: $approvedAt);
 
         $this->recordedEvents[] = new TravelRequestApproved(
             travelRequestId: $this->id,
@@ -160,11 +150,7 @@ final class TravelRequest
      */
     public function cancel(UserId $cancellerId, DateTimeImmutable $cancelledAt): void
     {
-        $this->decide(
-            targetStatus: TravelRequestStatus::Cancelled,
-            deciderId: $cancellerId,
-            decidedAt: $cancelledAt,
-        );
+        $this->decide(targetStatus: TravelRequestStatus::Cancelled, deciderId: $cancellerId, decidedAt: $cancelledAt);
 
         $this->recordedEvents[] = new TravelRequestCancelled(
             travelRequestId: $this->id,

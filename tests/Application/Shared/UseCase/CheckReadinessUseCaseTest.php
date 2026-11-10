@@ -20,10 +20,7 @@ final class CheckReadinessUseCaseTest extends TestCase
         $readiness = $useCase->execute();
 
         self::assertTrue($readiness->isReady());
-        self::assertSame(
-            ['mysql' => true, 'redis' => true],
-            $readiness->checks,
-        );
+        self::assertSame(['mysql' => true, 'redis' => true], $readiness->checks);
     }
 
     public function test_IsNotReadyWhenAnyCheckIsUnhealthy(): void
@@ -37,10 +34,7 @@ final class CheckReadinessUseCaseTest extends TestCase
         $readiness = $useCase->execute();
 
         self::assertFalse($readiness->isReady());
-        self::assertSame(
-            ['mysql' => true, 'rabbitmq' => false, 'redis' => true],
-            $readiness->checks,
-        );
+        self::assertSame(['mysql' => true, 'rabbitmq' => false, 'redis' => true], $readiness->checks);
     }
 
     public function test_IsReadyWithoutChecks(): void
@@ -50,9 +44,6 @@ final class CheckReadinessUseCaseTest extends TestCase
         $readiness = $useCaseWithoutChecks->execute();
 
         self::assertTrue($readiness->isReady());
-        self::assertSame(
-            [],
-            $readiness->checks,
-        );
+        self::assertSame([], $readiness->checks);
     }
 }

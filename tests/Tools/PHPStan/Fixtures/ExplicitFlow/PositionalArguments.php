@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Tools\PHPStan\Fixtures\ExplicitFlow;
 
 use DateTimeImmutable;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Str;
 
 final class PositionalArguments
@@ -33,6 +34,12 @@ final class PositionalArguments
         $variadic = $this->join('a', 'b');
 
         return $moment->format('Y') . $slug . $joined . $variadic . $this->describe(prefix: 'named');
+    }
+
+    public function schema(Blueprint $table): void
+    {
+        $table->string('name', 120)
+            ->nullable();
     }
 
     public function describe(string $prefix): string

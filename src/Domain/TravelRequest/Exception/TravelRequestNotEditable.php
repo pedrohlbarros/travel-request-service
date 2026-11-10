@@ -12,11 +12,7 @@ final class TravelRequestNotEditable extends BusinessRuleViolation
 {
     public static function inStatus(TravelRequestId $id, TravelRequestStatus $status): self
     {
-        $message = \sprintf(
-            'Travel request %s is %s and can no longer be edited.',
-            $id->toString(),
-            $status->value,
-        );
+        $message = \sprintf('Travel request %s is %s and can no longer be edited.', $id->toString(), $status->value);
 
         return new self($message);
     }

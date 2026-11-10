@@ -31,47 +31,17 @@ final class TravelRequestTest extends TestCase
 
         $travelRequest = Mother::requested();
 
-        self::assertSame(
-            Mother::TRAVEL_REQUEST_ID,
-            $travelRequest->id->toString(),
-        );
-        self::assertSame(
-            Mother::REQUESTER_ID,
-            $travelRequest->requesterId->toString(),
-        );
-        self::assertSame(
-            Mother::DESTINATION,
-            $travelRequest->destination->name,
-        );
-        self::assertSame(
-            Mother::DEPARTURE_DATE,
-            $travelRequest->period->departureDate->format(self::CALENDAR_DATE),
-        );
-        self::assertSame(
-            Mother::RETURN_DATE,
-            $travelRequest->period->returnDate->format(self::CALENDAR_DATE),
-        );
-        self::assertSame(
-            TravelRequestStatus::Requested,
-            $travelRequest->status,
-        );
-        self::assertSame(
-            TravelRequest::FIRST_VERSION,
-            $travelRequest->version,
-        );
-        self::assertEquals(
-            $requestedAt,
-            $travelRequest->createdAt,
-        );
-        self::assertEquals(
-            $requestedAt,
-            $travelRequest->updatedAt,
-        );
+        self::assertSame(Mother::TRAVEL_REQUEST_ID, $travelRequest->id->toString());
+        self::assertSame(Mother::REQUESTER_ID, $travelRequest->requesterId->toString());
+        self::assertSame(Mother::DESTINATION, $travelRequest->destination->name);
+        self::assertSame(Mother::DEPARTURE_DATE, $travelRequest->period->departureDate->format(self::CALENDAR_DATE));
+        self::assertSame(Mother::RETURN_DATE, $travelRequest->period->returnDate->format(self::CALENDAR_DATE));
+        self::assertSame(TravelRequestStatus::Requested, $travelRequest->status);
+        self::assertSame(TravelRequest::FIRST_VERSION, $travelRequest->version);
+        self::assertEquals($requestedAt, $travelRequest->createdAt);
+        self::assertEquals($requestedAt, $travelRequest->updatedAt);
         self::assertNull($travelRequest->decidedBy);
-        self::assertSame(
-            [],
-            $travelRequest->releaseEvents(),
-        );
+        self::assertSame([], $travelRequest->releaseEvents());
     }
 
     public function test_CannotRequestTravelDepartingBeforeToday(): void
@@ -82,10 +52,7 @@ final class TravelRequestTest extends TestCase
             id: TravelRequestId::fromString(id: Mother::TRAVEL_REQUEST_ID),
             requesterId: UserId::fromString(id: Mother::REQUESTER_ID),
             destination: Destination::fromString(name: Mother::DESTINATION),
-            period: Mother::period(
-                departureDate: '2026-11-08',
-                returnDate: '2026-11-12',
-            ),
+            period: Mother::period(departureDate: '2026-11-08', returnDate: '2026-11-12'),
             requestedAt: Mother::moment(moment: Mother::NOW),
         );
     }
@@ -96,17 +63,11 @@ final class TravelRequestTest extends TestCase
             id: TravelRequestId::fromString(id: Mother::TRAVEL_REQUEST_ID),
             requesterId: UserId::fromString(id: Mother::REQUESTER_ID),
             destination: Destination::fromString(name: Mother::DESTINATION),
-            period: Mother::period(
-                departureDate: '2026-11-09',
-                returnDate: '2026-11-09',
-            ),
+            period: Mother::period(departureDate: '2026-11-09', returnDate: '2026-11-09'),
             requestedAt: Mother::moment(moment: Mother::NOW),
         );
 
-        self::assertSame(
-            TravelRequestStatus::Requested,
-            $travelRequest->status,
-        );
+        self::assertSame(TravelRequestStatus::Requested, $travelRequest->status);
     }
 
     public function test_RequesterChangesDetailsWhileRequested(): void
@@ -117,45 +78,18 @@ final class TravelRequestTest extends TestCase
         $travelRequest->changeDetails(
             editorId: Mother::userId(id: Mother::REQUESTER_ID),
             destination: Destination::fromString(name: self::NEW_DESTINATION),
-            period: Mother::period(
-                departureDate: '2026-12-10',
-                returnDate: '2026-12-20',
-            ),
+            period: Mother::period(departureDate: '2026-12-10', returnDate: '2026-12-20'),
             changedAt: $changedAt,
         );
 
-        self::assertSame(
-            self::NEW_DESTINATION,
-            $travelRequest->destination->name,
-        );
-        self::assertSame(
-            '2026-12-10',
-            $travelRequest->period->departureDate->format(self::CALENDAR_DATE),
-        );
-        self::assertSame(
-            '2026-12-20',
-            $travelRequest->period->returnDate->format(self::CALENDAR_DATE),
-        );
-        self::assertSame(
-            TravelRequest::FIRST_VERSION + 1,
-            $travelRequest->version,
-        );
-        self::assertEquals(
-            $changedAt,
-            $travelRequest->updatedAt,
-        );
-        self::assertEquals(
-            Mother::moment(moment: Mother::NOW),
-            $travelRequest->createdAt,
-        );
-        self::assertSame(
-            TravelRequestStatus::Requested,
-            $travelRequest->status,
-        );
-        self::assertSame(
-            [],
-            $travelRequest->releaseEvents(),
-        );
+        self::assertSame(self::NEW_DESTINATION, $travelRequest->destination->name);
+        self::assertSame('2026-12-10', $travelRequest->period->departureDate->format(self::CALENDAR_DATE));
+        self::assertSame('2026-12-20', $travelRequest->period->returnDate->format(self::CALENDAR_DATE));
+        self::assertSame(TravelRequest::FIRST_VERSION + 1, $travelRequest->version);
+        self::assertEquals($changedAt, $travelRequest->updatedAt);
+        self::assertEquals(Mother::moment(moment: Mother::NOW), $travelRequest->createdAt);
+        self::assertSame(TravelRequestStatus::Requested, $travelRequest->status);
+        self::assertSame([], $travelRequest->releaseEvents());
     }
 
     public function test_OnlyTheRequesterChangesDetails(): void
@@ -211,10 +145,7 @@ final class TravelRequestTest extends TestCase
         $travelRequest->changeDetails(
             editorId: Mother::userId(id: Mother::REQUESTER_ID),
             destination: Destination::fromString(name: self::NEW_DESTINATION),
-            period: Mother::period(
-                departureDate: '2026-11-09',
-                returnDate: '2026-11-12',
-            ),
+            period: Mother::period(departureDate: '2026-11-09', returnDate: '2026-11-12'),
             changedAt: Mother::moment(moment: Mother::LATER),
         );
     }
@@ -233,14 +164,8 @@ final class TravelRequestTest extends TestCase
         } catch (TravelRequestNotOwned) {
         }
 
-        self::assertSame(
-            Mother::DESTINATION,
-            $travelRequest->destination->name,
-        );
-        self::assertSame(
-            TravelRequest::FIRST_VERSION,
-            $travelRequest->version,
-        );
+        self::assertSame(Mother::DESTINATION, $travelRequest->destination->name);
+        self::assertSame(TravelRequest::FIRST_VERSION, $travelRequest->version);
     }
 
     public function test_AdminApprovesRequestedTravelRequest(): void
@@ -248,27 +173,12 @@ final class TravelRequestTest extends TestCase
         $travelRequest = Mother::requested();
         $approvedAt = Mother::moment(moment: Mother::LATER);
 
-        $travelRequest->approve(
-            approverId: Mother::userId(id: Mother::ADMIN_ID),
-            approvedAt: $approvedAt,
-        );
+        $travelRequest->approve(approverId: Mother::userId(id: Mother::ADMIN_ID), approvedAt: $approvedAt);
 
-        self::assertSame(
-            TravelRequestStatus::Approved,
-            $travelRequest->status,
-        );
-        self::assertSame(
-            Mother::ADMIN_ID,
-            $travelRequest->decidedBy?->toString(),
-        );
-        self::assertSame(
-            TravelRequest::FIRST_VERSION + 1,
-            $travelRequest->version,
-        );
-        self::assertEquals(
-            $approvedAt,
-            $travelRequest->updatedAt,
-        );
+        self::assertSame(TravelRequestStatus::Approved, $travelRequest->status);
+        self::assertSame(Mother::ADMIN_ID, $travelRequest->decidedBy?->toString());
+        self::assertSame(TravelRequest::FIRST_VERSION + 1, $travelRequest->version);
+        self::assertEquals($approvedAt, $travelRequest->updatedAt);
     }
 
     public function test_ApprovalRecordsTravelRequestApproved(): void
@@ -276,51 +186,21 @@ final class TravelRequestTest extends TestCase
         $travelRequest = Mother::requested();
         $approvedAt = Mother::moment(moment: Mother::LATER);
 
-        $travelRequest->approve(
-            approverId: Mother::userId(id: Mother::ADMIN_ID),
-            approvedAt: $approvedAt,
-        );
+        $travelRequest->approve(approverId: Mother::userId(id: Mother::ADMIN_ID), approvedAt: $approvedAt);
 
         $releasedEvents = $travelRequest->releaseEvents();
 
         $approved = $releasedEvents[0] ?? null;
 
-        self::assertCount(
-            1,
-            $releasedEvents,
-        );
-        self::assertInstanceOf(
-            TravelRequestApproved::class,
-            $approved,
-        );
-        self::assertSame(
-            Mother::TRAVEL_REQUEST_ID,
-            $approved->travelRequestId->toString(),
-        );
-        self::assertSame(
-            Mother::REQUESTER_ID,
-            $approved->requesterId->toString(),
-        );
-        self::assertSame(
-            Mother::ADMIN_ID,
-            $approved->approvedBy->toString(),
-        );
-        self::assertSame(
-            Mother::DESTINATION,
-            $approved->destination->name,
-        );
-        self::assertEquals(
-            Mother::period(),
-            $approved->period,
-        );
-        self::assertSame(
-            TravelRequest::FIRST_VERSION + 1,
-            $approved->version,
-        );
-        self::assertEquals(
-            $approvedAt,
-            $approved->occurredAt,
-        );
+        self::assertCount(1, $releasedEvents);
+        self::assertInstanceOf(TravelRequestApproved::class, $approved);
+        self::assertSame(Mother::TRAVEL_REQUEST_ID, $approved->travelRequestId->toString());
+        self::assertSame(Mother::REQUESTER_ID, $approved->requesterId->toString());
+        self::assertSame(Mother::ADMIN_ID, $approved->approvedBy->toString());
+        self::assertSame(Mother::DESTINATION, $approved->destination->name);
+        self::assertEquals(Mother::period(), $approved->period);
+        self::assertSame(TravelRequest::FIRST_VERSION + 1, $approved->version);
+        self::assertEquals($approvedAt, $approved->occurredAt);
     }
 
     public function test_AdminCancelsRequestedTravelRequest(): void
@@ -328,27 +208,12 @@ final class TravelRequestTest extends TestCase
         $travelRequest = Mother::requested();
         $cancelledAt = Mother::moment(moment: Mother::LATER);
 
-        $travelRequest->cancel(
-            cancellerId: Mother::userId(id: Mother::ADMIN_ID),
-            cancelledAt: $cancelledAt,
-        );
+        $travelRequest->cancel(cancellerId: Mother::userId(id: Mother::ADMIN_ID), cancelledAt: $cancelledAt);
 
-        self::assertSame(
-            TravelRequestStatus::Cancelled,
-            $travelRequest->status,
-        );
-        self::assertSame(
-            Mother::ADMIN_ID,
-            $travelRequest->decidedBy?->toString(),
-        );
-        self::assertSame(
-            TravelRequest::FIRST_VERSION + 1,
-            $travelRequest->version,
-        );
-        self::assertEquals(
-            $cancelledAt,
-            $travelRequest->updatedAt,
-        );
+        self::assertSame(TravelRequestStatus::Cancelled, $travelRequest->status);
+        self::assertSame(Mother::ADMIN_ID, $travelRequest->decidedBy?->toString());
+        self::assertSame(TravelRequest::FIRST_VERSION + 1, $travelRequest->version);
+        self::assertEquals($cancelledAt, $travelRequest->updatedAt);
     }
 
     public function test_CancellationRecordsTravelRequestCancelled(): void
@@ -356,51 +221,21 @@ final class TravelRequestTest extends TestCase
         $travelRequest = Mother::requested();
         $cancelledAt = Mother::moment(moment: Mother::LATER);
 
-        $travelRequest->cancel(
-            cancellerId: Mother::userId(id: Mother::ADMIN_ID),
-            cancelledAt: $cancelledAt,
-        );
+        $travelRequest->cancel(cancellerId: Mother::userId(id: Mother::ADMIN_ID), cancelledAt: $cancelledAt);
 
         $releasedEvents = $travelRequest->releaseEvents();
 
         $cancelled = $releasedEvents[0] ?? null;
 
-        self::assertCount(
-            1,
-            $releasedEvents,
-        );
-        self::assertInstanceOf(
-            TravelRequestCancelled::class,
-            $cancelled,
-        );
-        self::assertSame(
-            Mother::TRAVEL_REQUEST_ID,
-            $cancelled->travelRequestId->toString(),
-        );
-        self::assertSame(
-            Mother::REQUESTER_ID,
-            $cancelled->requesterId->toString(),
-        );
-        self::assertSame(
-            Mother::ADMIN_ID,
-            $cancelled->cancelledBy->toString(),
-        );
-        self::assertSame(
-            Mother::DESTINATION,
-            $cancelled->destination->name,
-        );
-        self::assertEquals(
-            Mother::period(),
-            $cancelled->period,
-        );
-        self::assertSame(
-            TravelRequest::FIRST_VERSION + 1,
-            $cancelled->version,
-        );
-        self::assertEquals(
-            $cancelledAt,
-            $cancelled->occurredAt,
-        );
+        self::assertCount(1, $releasedEvents);
+        self::assertInstanceOf(TravelRequestCancelled::class, $cancelled);
+        self::assertSame(Mother::TRAVEL_REQUEST_ID, $cancelled->travelRequestId->toString());
+        self::assertSame(Mother::REQUESTER_ID, $cancelled->requesterId->toString());
+        self::assertSame(Mother::ADMIN_ID, $cancelled->cancelledBy->toString());
+        self::assertSame(Mother::DESTINATION, $cancelled->destination->name);
+        self::assertEquals(Mother::period(), $cancelled->period);
+        self::assertSame(TravelRequest::FIRST_VERSION + 1, $cancelled->version);
+        self::assertEquals($cancelledAt, $cancelled->occurredAt);
     }
 
     public function test_AdminCanApproveOwnTravelRequest(): void
@@ -412,10 +247,7 @@ final class TravelRequestTest extends TestCase
             approvedAt: Mother::moment(moment: Mother::LATER),
         );
 
-        self::assertSame(
-            TravelRequestStatus::Approved,
-            $adminOwnTravelRequest->status,
-        );
+        self::assertSame(TravelRequestStatus::Approved, $adminOwnTravelRequest->status);
     }
 
     public function test_AdminCanCancelOwnTravelRequest(): void
@@ -427,10 +259,7 @@ final class TravelRequestTest extends TestCase
             cancelledAt: Mother::moment(moment: Mother::LATER),
         );
 
-        self::assertSame(
-            TravelRequestStatus::Cancelled,
-            $adminOwnTravelRequest->status,
-        );
+        self::assertSame(TravelRequestStatus::Cancelled, $adminOwnTravelRequest->status);
     }
 
     public function test_CannotCancelApprovedTravelRequest(): void
@@ -496,18 +325,9 @@ final class TravelRequestTest extends TestCase
         } catch (InvalidStatusTransition) {
         }
 
-        self::assertSame(
-            $versionAfterApproval,
-            $travelRequest->version,
-        );
-        self::assertSame(
-            TravelRequestStatus::Approved,
-            $travelRequest->status,
-        );
-        self::assertSame(
-            [],
-            $travelRequest->releaseEvents(),
-        );
+        self::assertSame($versionAfterApproval, $travelRequest->version);
+        self::assertSame(TravelRequestStatus::Approved, $travelRequest->status);
+        self::assertSame([], $travelRequest->releaseEvents());
     }
 
     public function test_ReleasingEventsEmptiesTheRecord(): void
@@ -520,10 +340,7 @@ final class TravelRequestTest extends TestCase
 
         $travelRequest->releaseEvents();
 
-        self::assertSame(
-            [],
-            $travelRequest->releaseEvents(),
-        );
+        self::assertSame([], $travelRequest->releaseEvents());
     }
 
     public function test_AcceptsExpectedVersionWhenItMatches(): void
@@ -563,45 +380,15 @@ final class TravelRequestTest extends TestCase
             decidedBy: UserId::fromString(id: Mother::ADMIN_ID),
         );
 
-        self::assertSame(
-            Mother::TRAVEL_REQUEST_ID,
-            $travelRequest->id->toString(),
-        );
-        self::assertSame(
-            Mother::REQUESTER_ID,
-            $travelRequest->requesterId->toString(),
-        );
-        self::assertSame(
-            Mother::DESTINATION,
-            $travelRequest->destination->name,
-        );
-        self::assertEquals(
-            Mother::period(),
-            $travelRequest->period,
-        );
-        self::assertSame(
-            TravelRequestStatus::Cancelled,
-            $travelRequest->status,
-        );
-        self::assertSame(
-            $storedVersion,
-            $travelRequest->version,
-        );
-        self::assertEquals(
-            $createdAt,
-            $travelRequest->createdAt,
-        );
-        self::assertEquals(
-            $updatedAt,
-            $travelRequest->updatedAt,
-        );
-        self::assertSame(
-            Mother::ADMIN_ID,
-            $travelRequest->decidedBy?->toString(),
-        );
-        self::assertSame(
-            [],
-            $travelRequest->releaseEvents(),
-        );
+        self::assertSame(Mother::TRAVEL_REQUEST_ID, $travelRequest->id->toString());
+        self::assertSame(Mother::REQUESTER_ID, $travelRequest->requesterId->toString());
+        self::assertSame(Mother::DESTINATION, $travelRequest->destination->name);
+        self::assertEquals(Mother::period(), $travelRequest->period);
+        self::assertSame(TravelRequestStatus::Cancelled, $travelRequest->status);
+        self::assertSame($storedVersion, $travelRequest->version);
+        self::assertEquals($createdAt, $travelRequest->createdAt);
+        self::assertEquals($updatedAt, $travelRequest->updatedAt);
+        self::assertSame(Mother::ADMIN_ID, $travelRequest->decidedBy?->toString());
+        self::assertSame([], $travelRequest->releaseEvents());
     }
 }

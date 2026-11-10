@@ -18,10 +18,7 @@ final class IdentifiersTest extends TestCase
         $sameId = TravelRequestId::fromString(id: TravelRequestMother::TRAVEL_REQUEST_ID);
         $otherId = TravelRequestId::fromString(id: TravelRequestMother::REQUESTER_ID);
 
-        self::assertSame(
-            TravelRequestMother::TRAVEL_REQUEST_ID,
-            $id->toString(),
-        );
+        self::assertSame(TravelRequestMother::TRAVEL_REQUEST_ID, $id->toString());
         self::assertTrue($id->equals(other: $sameId));
         self::assertFalse($id->equals(other: $otherId));
     }
@@ -32,10 +29,7 @@ final class IdentifiersTest extends TestCase
         $sameId = UserId::fromString(id: TravelRequestMother::REQUESTER_ID);
         $otherId = UserId::fromString(id: TravelRequestMother::ADMIN_ID);
 
-        self::assertSame(
-            TravelRequestMother::REQUESTER_ID,
-            $id->toString(),
-        );
+        self::assertSame(TravelRequestMother::REQUESTER_ID, $id->toString());
         self::assertTrue($id->equals(other: $sameId));
         self::assertFalse($id->equals(other: $otherId));
     }

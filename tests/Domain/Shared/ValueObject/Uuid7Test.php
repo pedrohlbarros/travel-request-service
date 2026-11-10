@@ -17,20 +17,14 @@ final class Uuid7Test extends TestCase
     {
         $uuid = Uuid7::fromString(candidate: self::CANONICAL_UUID7);
 
-        self::assertSame(
-            self::CANONICAL_UUID7,
-            $uuid->value,
-        );
+        self::assertSame(self::CANONICAL_UUID7, $uuid->value);
     }
 
     public function test_NormalizesUppercaseToLowercase(): void
     {
         $uuid = Uuid7::fromString(candidate: strtoupper(self::CANONICAL_UUID7));
 
-        self::assertSame(
-            self::CANONICAL_UUID7,
-            $uuid->value,
-        );
+        self::assertSame(self::CANONICAL_UUID7, $uuid->value);
     }
 
     /**

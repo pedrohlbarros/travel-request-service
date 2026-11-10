@@ -37,18 +37,12 @@ final class NoFrameworkFunctionsInCoreRuleTest extends RuleTestCase
 
     public function test_AllowsNativeAndOwnFunctionsInCore(): void
     {
-        $this->analyse(
-            [__DIR__ . '/Fixtures/src/Domain/CallsAllowedFunctions.php'],
-            [],
-        );
+        $this->analyse([__DIR__ . '/Fixtures/src/Domain/CallsAllowedFunctions.php'], []);
     }
 
     public function test_AllowsFrameworkFunctionsInAdapters(): void
     {
-        $this->analyse(
-            [__DIR__ . '/Fixtures/src/Infrastructure/CallsFrameworkFunctions.php'],
-            [],
-        );
+        $this->analyse([__DIR__ . '/Fixtures/src/Infrastructure/CallsFrameworkFunctions.php'], []);
     }
 
     protected function getRule(): Rule

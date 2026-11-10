@@ -52,26 +52,11 @@ final class CancelTravelRequestUseCaseTest extends TestCase
 
         $stored = $this->storedTravelRequest();
 
-        self::assertEquals(
-            TravelRequestOutput::fromEntity(travelRequest: $stored),
-            $changed,
-        );
-        self::assertSame(
-            TravelRequestStatus::Cancelled,
-            $stored->status,
-        );
-        self::assertSame(
-            Mother::ADMIN_ID,
-            $stored->decidedBy?->toString(),
-        );
-        self::assertSame(
-            TravelRequest::FIRST_VERSION + 1,
-            $stored->version,
-        );
-        self::assertEquals(
-            Mother::moment(moment: Mother::LATER),
-            $stored->updatedAt,
-        );
+        self::assertEquals(TravelRequestOutput::fromEntity(travelRequest: $stored), $changed);
+        self::assertSame(TravelRequestStatus::Cancelled, $stored->status);
+        self::assertSame(Mother::ADMIN_ID, $stored->decidedBy?->toString());
+        self::assertSame(TravelRequest::FIRST_VERSION + 1, $stored->version);
+        self::assertEquals(Mother::moment(moment: Mother::LATER), $stored->updatedAt);
     }
 
     public function test_PublishesCancelledEventOnce(): void
@@ -86,22 +71,10 @@ final class CancelTravelRequestUseCaseTest extends TestCase
 
         $published = $this->events->publishedEvents[0] ?? null;
 
-        self::assertCount(
-            1,
-            $this->events->publishedEvents,
-        );
-        self::assertInstanceOf(
-            TravelRequestCancelled::class,
-            $published,
-        );
-        self::assertSame(
-            Mother::TRAVEL_REQUEST_ID,
-            $published->travelRequestId->toString(),
-        );
-        self::assertSame(
-            Mother::ADMIN_ID,
-            $published->cancelledBy->toString(),
-        );
+        self::assertCount(1, $this->events->publishedEvents);
+        self::assertInstanceOf(TravelRequestCancelled::class, $published);
+        self::assertSame(Mother::TRAVEL_REQUEST_ID, $published->travelRequestId->toString());
+        self::assertSame(Mother::ADMIN_ID, $published->cancelledBy->toString());
     }
 
     public function test_RejectsStaleExpectedVersion(): void
@@ -119,14 +92,8 @@ final class CancelTravelRequestUseCaseTest extends TestCase
         } catch (TravelRequestVersionMismatch) {
         }
 
-        self::assertSame(
-            TravelRequestStatus::Requested,
-            $this->storedTravelRequest()->status,
-        );
-        self::assertSame(
-            [],
-            $this->events->publishedEvents,
-        );
+        self::assertSame(TravelRequestStatus::Requested, $this->storedTravelRequest()->status);
+        self::assertSame([], $this->events->publishedEvents);
     }
 
     public function test_CannotCancelApprovedTravelRequest(): void
@@ -144,14 +111,8 @@ final class CancelTravelRequestUseCaseTest extends TestCase
         } catch (InvalidStatusTransition) {
         }
 
-        self::assertSame(
-            TravelRequestStatus::Approved,
-            $this->storedTravelRequest()->status,
-        );
-        self::assertSame(
-            [],
-            $this->events->publishedEvents,
-        );
+        self::assertSame(TravelRequestStatus::Approved, $this->storedTravelRequest()->status);
+        self::assertSame([], $this->events->publishedEvents);
     }
 
     public function test_AdminCanCancelOwnTravelRequest(): void
@@ -164,10 +125,7 @@ final class CancelTravelRequestUseCaseTest extends TestCase
             expectedVersion: TravelRequest::FIRST_VERSION,
         ));
 
-        self::assertSame(
-            TravelRequestStatus::Cancelled,
-            $this->storedTravelRequest()->status,
-        );
+        self::assertSame(TravelRequestStatus::Cancelled, $this->storedTravelRequest()->status);
     }
 
     public function test_FailsForUnknownTravelRequest(): void

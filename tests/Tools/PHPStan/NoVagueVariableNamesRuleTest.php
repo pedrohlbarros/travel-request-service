@@ -33,10 +33,7 @@ final class NoVagueVariableNamesRuleTest extends RuleTestCase
 
     public function test_AcceptsDescriptiveAndAllowedShortNames(): void
     {
-        $this->analyse(
-            [__DIR__ . '/Fixtures/Naming/DescriptiveNames.php'],
-            [],
-        );
+        $this->analyse([__DIR__ . '/Fixtures/Naming/DescriptiveNames.php'], []);
     }
 
     protected function getRule(): Rule

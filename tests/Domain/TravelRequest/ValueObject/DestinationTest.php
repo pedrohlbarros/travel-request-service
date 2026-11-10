@@ -15,10 +15,7 @@ final class DestinationTest extends TestCase
     {
         $destination = Destination::fromString(name: "  São Paulo \t");
 
-        self::assertSame(
-            'São Paulo',
-            $destination->name,
-        );
+        self::assertSame('São Paulo', $destination->name);
     }
 
     /**
@@ -27,18 +24,9 @@ final class DestinationTest extends TestCase
     public static function acceptedNames(): array
     {
         return [
-            'shortest' => [str_repeat(
-                'a',
-                Destination::SHORTEST_NAME,
-            )],
-            'longest' => [str_repeat(
-                'a',
-                Destination::LONGEST_NAME,
-            )],
-            'longestInMultibyteCharacters' => [str_repeat(
-                'ã',
-                Destination::LONGEST_NAME,
-            )],
+            'shortest' => [str_repeat('a', Destination::SHORTEST_NAME)],
+            'longest' => [str_repeat('a', Destination::LONGEST_NAME)],
+            'longestInMultibyteCharacters' => [str_repeat('ã', Destination::LONGEST_NAME)],
         ];
     }
 
@@ -47,10 +35,7 @@ final class DestinationTest extends TestCase
     {
         $destination = Destination::fromString(name: $name);
 
-        self::assertSame(
-            $name,
-            $destination->name,
-        );
+        self::assertSame($name, $destination->name);
     }
 
     /**
@@ -61,15 +46,9 @@ final class DestinationTest extends TestCase
         return [
             'empty' => [''],
             'onlyWhitespace' => ['    '],
-            'tooShort' => [str_repeat(
-                'a',
-                Destination::SHORTEST_NAME - 1,
-            )],
+            'tooShort' => [str_repeat('a', Destination::SHORTEST_NAME - 1)],
             'tooShortAfterTrim' => ['  a  '],
-            'tooLong' => [str_repeat(
-                'a',
-                Destination::LONGEST_NAME + 1,
-            )],
+            'tooLong' => [str_repeat('a', Destination::LONGEST_NAME + 1)],
         ];
     }
 

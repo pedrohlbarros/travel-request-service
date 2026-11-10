@@ -29,10 +29,7 @@ final readonly class MySqlHealthCheck implements HealthCheck
 
             return true;
         } catch (Throwable $exception) {
-            $this->logger->warning(
-                'Readiness check failed',
-                ['check' => $this->name(), 'exception' => $exception],
-            );
+            $this->logger->warning('Readiness check failed', ['check' => $this->name(), 'exception' => $exception]);
 
             return false;
         }

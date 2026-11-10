@@ -4,10 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Str;
 
-$appNameSlug = Str::slug((string) env(
-    'APP_NAME',
-    'laravel',
-));
+$appNameSlug = Str::slug((string) env('APP_NAME', 'laravel'));
 
 return [
 
@@ -22,10 +19,7 @@ return [
     |
     */
 
-    'default' => env(
-        'CACHE_STORE',
-        'redis',
-    ),
+    'default' => env('CACHE_STORE', 'redis'),
 
     /*
     |--------------------------------------------------------------------------
@@ -52,10 +46,7 @@ return [
         'database' => [
             'driver' => 'database',
             'connection' => env('DB_CACHE_CONNECTION'),
-            'table' => env(
-                'DB_CACHE_TABLE',
-                'cache',
-            ),
+            'table' => env('DB_CACHE_TABLE', 'cache'),
             'lock_connection' => env('DB_CACHE_LOCK_CONNECTION'),
             'lock_table' => env('DB_CACHE_LOCK_TABLE'),
         ],
@@ -69,10 +60,7 @@ return [
         'storage' => [
             'driver' => 'storage',
             'disk' => env('CACHE_STORAGE_DISK'),
-            'path' => env(
-                'CACHE_STORAGE_PATH',
-                'framework/cache/data',
-            ),
+            'path' => env('CACHE_STORAGE_PATH', 'framework/cache/data'),
         ],
 
         'memcached' => [
@@ -87,14 +75,8 @@ return [
             ],
             'servers' => [
                 [
-                    'host' => env(
-                        'MEMCACHED_HOST',
-                        '127.0.0.1',
-                    ),
-                    'port' => env(
-                        'MEMCACHED_PORT',
-                        11211,
-                    ),
+                    'host' => env('MEMCACHED_HOST', '127.0.0.1'),
+                    'port' => env('MEMCACHED_PORT', 11211),
                     'weight' => 100,
                 ],
             ],
@@ -102,28 +84,16 @@ return [
 
         'redis' => [
             'driver' => 'redis',
-            'connection' => env(
-                'REDIS_CACHE_CONNECTION',
-                'cache',
-            ),
-            'lock_connection' => env(
-                'REDIS_CACHE_LOCK_CONNECTION',
-                'default',
-            ),
+            'connection' => env('REDIS_CACHE_CONNECTION', 'cache'),
+            'lock_connection' => env('REDIS_CACHE_LOCK_CONNECTION', 'default'),
         ],
 
         'dynamodb' => [
             'driver' => 'dynamodb',
             'key' => env('AWS_ACCESS_KEY_ID'),
             'secret' => env('AWS_SECRET_ACCESS_KEY'),
-            'region' => env(
-                'AWS_DEFAULT_REGION',
-                'us-east-1',
-            ),
-            'table' => env(
-                'DYNAMODB_CACHE_TABLE',
-                'cache',
-            ),
+            'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
+            'table' => env('DYNAMODB_CACHE_TABLE', 'cache'),
             'endpoint' => env('DYNAMODB_ENDPOINT'),
         ],
 
@@ -152,10 +122,7 @@ return [
     |
     */
 
-    'prefix' => env(
-        'CACHE_PREFIX',
-        $appNameSlug . '-cache-',
-    ),
+    'prefix' => env('CACHE_PREFIX', $appNameSlug . '-cache-'),
 
     /*
     |--------------------------------------------------------------------------

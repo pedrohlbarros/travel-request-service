@@ -33,6 +33,8 @@ final readonly class NamedArgumentsRule implements Rule
 {
     private const array OWN_NAMESPACES = ['Domain\\', 'Application\\', 'Infrastructure\\', 'Interfaces\\', 'Tests\\', 'Tools\\'];
 
+    private const array SCHEMA_NAMESPACES = ['Illuminate\\Database\\Schema\\'];
+
     public function __construct(
         private ReflectionProvider $reflectionProvider,
     ) {}
@@ -54,10 +56,7 @@ final readonly class NamedArgumentsRule implements Rule
             return [];
         }
 
-        $callee = $this->ownCalleeOf(
-            call: $node,
-            scope: $scope,
-        );
+        $callee = $this->ownCalleeOf(call: $node, scope: $scope);
 
         if ($callee === null) {
             return [];
@@ -78,10 +77,7 @@ final readonly class NamedArgumentsRule implements Rule
      */
     private function errorsFor(CallLike $call, array $arguments, array $parameters): array
     {
-        if ($this->hasSpreadOrVariadicArgument(
-            arguments: $arguments,
-            parameters: $parameters,
-        )) {
+        if ($this->hasSpreadOrVariadicArgument(arguments: $arguments, parameters: $parameters)) {
             return [];
         }
 
@@ -146,8 +142,7 @@ final readonly class NamedArgumentsRule implements Rule
             default => null,
         };
 
-        if ($callee === null || ! $this->isOwnCode(className: $callee->getDeclaringClass()
-            ->getName())) {
+        if ($callee === null || ! $this->requiresNamedArguments(callee: $callee)) {
             return null;
         }
 
@@ -159,11 +154,7 @@ final readonly class NamedArgumentsRule implements Rule
         \assert($call->class instanceof Name);
         $classType = new ObjectType($scope->resolveName($call->class));
 
-        return $this->method(
-            typeWithMethod: $classType,
-            methodName: $call->name,
-            scope: $scope,
-        );
+        return $this->method(typeWithMethod: $classType, methodName: $call->name, scope: $scope);
     }
 
     private function method(Type $typeWithMethod, Node $methodName, Scope $scope): ?ExtendedMethodReflection
@@ -172,10 +163,7 @@ final readonly class NamedArgumentsRule implements Rule
             return null;
         }
 
-        return $scope->getMethodReflection(
-            $typeWithMethod,
-            $methodName->toString(),
-        );
+        return $scope->getMethodReflection($typeWithMethod, $methodName->toString());
     }
 
     private function constructor(string $className): ?ExtendedMethodReflection
@@ -189,14 +177,30 @@ final readonly class NamedArgumentsRule implements Rule
         return $class->hasConstructor() ? $class->getConstructor() : null;
     }
 
-    private function isOwnCode(string $className): bool
+    /**
+     * Own code always; the schema builder of migrations too, where bare values like `16, true` say nothing, but
+     * only its real methods: fluent column modifiers go through __call.
+     */
+    private function requiresNamedArguments(ExtendedMethodReflection $callee): bool
     {
-        return array_any(
-            self::OWN_NAMESPACES,
-            static fn(string $namespace): bool => str_starts_with(
-                $className,
-                $namespace,
-            ),
-        );
+        $declaringClass = $callee->getDeclaringClass();
+        $className = $declaringClass->getName();
+
+        if (self::isInNamespaces(className: $className, namespaces: self::OWN_NAMESPACES)) {
+            return true;
+        }
+
+        $isSchemaBuilder = self::isInNamespaces(className: $className, namespaces: self::SCHEMA_NAMESPACES);
+        $nativeClass = $declaringClass->getNativeReflection();
+
+        return $isSchemaBuilder && $nativeClass->hasMethod($callee->getName());
+    }
+
+    /**
+     * @param list<string> $namespaces
+     */
+    private static function isInNamespaces(string $className, array $namespaces): bool
+    {
+        return array_any($namespaces, static fn(string $namespace): bool => str_starts_with($className, $namespace));
     }
 }

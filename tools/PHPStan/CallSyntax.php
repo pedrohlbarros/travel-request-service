@@ -27,10 +27,7 @@ final readonly class CallSyntax
             return [];
         }
 
-        $arguments = array_filter(
-            $call->getRawArgs(),
-            static fn(Node $argument): bool => $argument instanceof Arg,
-        );
+        $arguments = array_filter($call->getRawArgs(), static fn(Node $argument): bool => $argument instanceof Arg);
 
         return array_values($arguments);
     }
@@ -48,6 +45,21 @@ final readonly class CallSyntax
         };
 
         return $callee->getEndLine();
+    }
+
+    /**
+     * File position where the callee's name ends; the argument list opens right after it.
+     */
+    public static function calleeEndPosition(CallLike $call): int
+    {
+        $callee = match (true) {
+            $call instanceof MethodCall, $call instanceof NullsafeMethodCall, $call instanceof StaticCall => $call->name,
+            $call instanceof FuncCall => $call->name,
+            $call instanceof New_ => $call->class,
+            default => $call,
+        };
+
+        return $callee->getEndFilePos();
     }
 
     public static function displayName(CallLike $call): string

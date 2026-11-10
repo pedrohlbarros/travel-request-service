@@ -44,10 +44,7 @@ final readonly class NoVagueVariableNamesRule implements Rule
         $errors = [];
 
         foreach ($this->declaredNames(node: $node) as $declaredName) {
-            $error = $this->errorFor(
-                name: $declaredName,
-                line: $node->getStartLine(),
-            );
+            $error = $this->errorFor(name: $declaredName, line: $node->getStartLine());
 
             if ($error !== null) {
                 $errors[] = $error;
@@ -101,33 +98,19 @@ final readonly class NoVagueVariableNamesRule implements Rule
     {
         $normalizedName = strtolower($name);
 
-        if ($normalizedName === 'this' || \in_array(
-            $normalizedName,
-            self::ALLOWED_SHORT_NAMES,
-            true,
-        )) {
+        if ($normalizedName === 'this' || \in_array($normalizedName, self::ALLOWED_SHORT_NAMES, true)) {
             return null;
         }
 
-        if (\in_array(
-            $normalizedName,
-            self::VAGUE_NAMES,
-            true,
-        )) {
-            return RuleErrorBuilder::message(sprintf(
-                'Name $%s is too generic; say what the value is.',
-                $name,
-            ))
+        if (\in_array($normalizedName, self::VAGUE_NAMES, true)) {
+            return RuleErrorBuilder::message(sprintf('Name $%s is too generic; say what the value is.', $name))
                 ->identifier('naming.vague')
                 ->line($line)
                 ->build();
         }
 
         if (mb_strlen($name) < self::MINIMUM_NAME_LENGTH) {
-            return RuleErrorBuilder::message(sprintf(
-                'Name $%s is too short; say what the value is.',
-                $name,
-            ))
+            return RuleErrorBuilder::message(sprintf('Name $%s is too short; say what the value is.', $name))
                 ->identifier('naming.tooShort')
                 ->line($line)
                 ->build();
