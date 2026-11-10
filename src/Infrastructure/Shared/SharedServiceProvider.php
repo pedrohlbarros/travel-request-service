@@ -4,18 +4,28 @@ declare(strict_types=1);
 
 namespace Infrastructure\Shared;
 
+use Application\Shared\Port\Clock;
+use Application\Shared\Port\IdentifierGenerator;
 use Application\Shared\UseCase\CheckReadinessUseCase;
 use Illuminate\Contracts\Config\Repository as Config;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
+use Infrastructure\Shared\Clock\SystemClock;
 use Infrastructure\Shared\Health\MySqlHealthCheck;
 use Infrastructure\Shared\Health\RabbitMqHealthCheck;
 use Infrastructure\Shared\Health\RedisHealthCheck;
+use Infrastructure\Shared\Identifier\LaravelUuid7Generator;
 use Infrastructure\Shared\Messaging\RabbitMqConnectionFactory;
 
 final class SharedServiceProvider extends ServiceProvider
 {
     public const string HEALTH_CHECKS_TAG = 'health.checks';
+
+    /** @var array<class-string, class-string> */
+    public array $bindings = [
+        Clock::class => SystemClock::class,
+        IdentifierGenerator::class => LaravelUuid7Generator::class,
+    ];
 
     public function register(): void
     {
