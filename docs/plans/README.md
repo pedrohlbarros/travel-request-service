@@ -13,7 +13,7 @@ Nenhuma decisão nova é tomada dentro de uma fase sem aval; o que surgir vira p
 | # | Fase | Status |
 |---|---|---|
 | [00](00-fundacao.md) | Fundação | Concluído (2026-11-09) |
-| [01](01-dominio-travel-request.md) | Domínio TravelRequest | Proposto |
+| [01](01-dominio-travel-request.md) | Domínio TravelRequest | Concluído (2026-11-09) |
 | [02](02-identity.md) | Identity | Proposto |
 | [03](03-api-pedidos.md) | API de pedidos | Proposto |
 | [04](04-mensageria.md) | Mensageria | Proposto |
