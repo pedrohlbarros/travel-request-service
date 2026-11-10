@@ -26,3 +26,8 @@ parameters:
 rules:
     - Tools\PHPStan\NoFrameworkFunctionsInCoreRule
     - Tools\PHPStan\NoVagueVariableNamesRule
+    - Tools\PHPStan\NoThrowInConditionalExpressionRule
+    - Tools\PHPStan\MaxCallNestingRule
+    - Tools\PHPStan\NamedArgumentsRule
+    - Tools\PHPStan\OneArgumentPerLineRule
+    - Tools\PHPStan\OneChainedCallPerLineRule

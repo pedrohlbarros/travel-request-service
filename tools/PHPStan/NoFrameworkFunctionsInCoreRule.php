@@ -35,27 +35,49 @@ final readonly class NoFrameworkFunctionsInCoreRule implements Rule
 
     public function processNode(Node $node, Scope $scope): array
     {
-        if (!$node->name instanceof Name || preg_match(self::CORE_PATH_PATTERN, $scope->getFile()) !== 1) {
+        if (!$node->name instanceof Name || preg_match(
+            self::CORE_PATH_PATTERN,
+            $scope->getFile(),
+        ) !== 1) {
             return [];
         }
 
-        if (!$this->reflectionProvider->hasFunction($node->name, $scope)) {
+        if (!$this->reflectionProvider->hasFunction(
+            $node->name,
+            $scope,
+        )) {
             return [];
         }
 
-        $function = $this->reflectionProvider->getFunction($node->name, $scope);
+        $function = $this->reflectionProvider->getFunction(
+            $node->name,
+            $scope,
+        );
         $definedIn = $function->getFileName();
         $resolved = $definedIn === null ? false : realpath($definedIn);
 
-        if ($definedIn === null || preg_match(self::FRAMEWORK_PATH_PATTERN, $resolved === false ? $definedIn : $resolved) !== 1) {
+        if ($definedIn === null) {
             return [];
         }
 
+        $isFrameworkFunction = preg_match(
+            self::FRAMEWORK_PATH_PATTERN,
+            $resolved === false ? $definedIn : $resolved,
+        ) === 1;
+
+        if (! $isFrameworkFunction) {
+            return [];
+        }
+
+        $message = sprintf(
+            'Domain and Application must not call the framework function %s(); inject a port instead.',
+            $function->getName(),
+        );
+
         return [
-            RuleErrorBuilder::message(sprintf(
-                'Domain and Application must not call the framework function %s(); inject a port instead.',
-                $function->getName(),
-            ))->identifier('architecture.frameworkFunction')->build(),
+            RuleErrorBuilder::message($message)
+                ->identifier('architecture.frameworkFunction')
+                ->build(),
         ];
     }
 }

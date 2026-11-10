@@ -43,8 +43,11 @@ final readonly class NoVagueVariableNamesRule implements Rule
     {
         $errors = [];
 
-        foreach ($this->declaredNames($node) as $declaredName) {
-            $error = $this->errorFor($declaredName, $node->getStartLine());
+        foreach ($this->declaredNames(node: $node) as $declaredName) {
+            $error = $this->errorFor(
+                name: $declaredName,
+                line: $node->getStartLine(),
+            );
 
             if ($error !== null) {
                 $errors[] = $error;
@@ -60,10 +63,10 @@ final readonly class NoVagueVariableNamesRule implements Rule
     private function declaredNames(Node $node): array
     {
         return match (true) {
-            $node instanceof Param => $this->namesIn($node->var),
-            $node instanceof Assign, $node instanceof AssignRef => $this->namesIn($node->var),
-            $node instanceof Foreach_ => [...$this->namesIn($node->keyVar), ...$this->namesIn($node->valueVar)],
-            $node instanceof Catch_ => $this->namesIn($node->var),
+            $node instanceof Param => $this->namesIn(target: $node->var),
+            $node instanceof Assign, $node instanceof AssignRef => $this->namesIn(target: $node->var),
+            $node instanceof Foreach_ => [...$this->namesIn(target: $node->keyVar), ...$this->namesIn(target: $node->valueVar)],
+            $node instanceof Catch_ => $this->namesIn(target: $node->var),
             $node instanceof Property => array_values(array_map(
                 static fn(Node\PropertyItem $property): string => $property->name->toString(),
                 $node->props,
@@ -85,7 +88,7 @@ final readonly class NoVagueVariableNamesRule implements Rule
             $names = [];
 
             foreach ($target->items as $listItem) {
-                $names = [...$names, ...$this->namesIn($listItem?->value)];
+                $names = [...$names, ...$this->namesIn(target: $listItem?->value)];
             }
 
             return $names;
@@ -98,19 +101,33 @@ final readonly class NoVagueVariableNamesRule implements Rule
     {
         $normalizedName = strtolower($name);
 
-        if ($normalizedName === 'this' || \in_array($normalizedName, self::ALLOWED_SHORT_NAMES, true)) {
+        if ($normalizedName === 'this' || \in_array(
+            $normalizedName,
+            self::ALLOWED_SHORT_NAMES,
+            true,
+        )) {
             return null;
         }
 
-        if (\in_array($normalizedName, self::VAGUE_NAMES, true)) {
-            return RuleErrorBuilder::message(sprintf('Name $%s is too generic; say what the value is.', $name))
+        if (\in_array(
+            $normalizedName,
+            self::VAGUE_NAMES,
+            true,
+        )) {
+            return RuleErrorBuilder::message(sprintf(
+                'Name $%s is too generic; say what the value is.',
+                $name,
+            ))
                 ->identifier('naming.vague')
                 ->line($line)
                 ->build();
         }
 
         if (mb_strlen($name) < self::MINIMUM_NAME_LENGTH) {
-            return RuleErrorBuilder::message(sprintf('Name $%s is too short; say what the value is.', $name))
+            return RuleErrorBuilder::message(sprintf(
+                'Name $%s is too short; say what the value is.',
+                $name,
+            ))
                 ->identifier('naming.tooShort')
                 ->line($line)
                 ->build();
