@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="tests/bootstrap.php"
+         cacheDirectory=".phpunit.cache"
+         colors="true"
+         executionOrder="random"
+         failOnRisky="true"
+         failOnWarning="true"
+         failOnDeprecation="true"
+         failOnPhpunitDeprecation="true"
+         beStrictAboutOutputDuringTests="true"
+         beStrictAboutCoverageMetadata="false"
+>
+    <testsuites>
+        <testsuite name="unit">
+            <directory>tests/Domain</directory>
+            <directory>tests/Application</directory>
+        </testsuite>
+        <testsuite name="integration">
+            <directory>tests/Infrastructure</directory>
+        </testsuite>
+        <testsuite name="feature">
+            <directory>tests/Interfaces</directory>
+        </testsuite>
+        <testsuite name="tools">
+            <directory>tests/Tools</directory>
+        </testsuite>
+        <testsuite name="e2e">
+            <directory>tests/EndToEnd</directory>
+        </testsuite>
+    </testsuites>
+    <source>
+        <include>
+            <directory>src</directory>
+        </include>
+    </source>
+    <php>
+        <ini name="memory_limit" value="1G"/>
+        <env name="APP_ENV" value="testing" force="true"/>
+        <env name="APP_DEBUG" value="true" force="true"/>
+        <env name="APP_MAINTENANCE_DRIVER" value="file"/>
+        <env name="LOG_CHANNEL" value="null" force="true"/>
+        <env name="CACHE_STORE" value="array" force="true"/>
+        <env name="QUEUE_CONNECTION" value="sync" force="true"/>
+        <env name="SESSION_DRIVER" value="array" force="true"/>
+        <env name="MAIL_MAILER" value="array" force="true"/>
+        <env name="BROADCAST_CONNECTION" value="null" force="true"/>
+        <env name="REDIS_DB" value="1" force="true"/>
+        <env name="REDIS_CACHE_DB" value="2" force="true"/>
+    </php>
+</phpunit>
