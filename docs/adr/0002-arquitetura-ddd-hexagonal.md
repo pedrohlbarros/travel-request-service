@@ -1,6 +1,6 @@
 # 0002 — Arquitetura DDD + Hexagonal
 
-- **Status:** Aceito
+- **Status:** Aceito (trecho sobre `app/` substituído por [0025](0025-providers-por-contexto-sem-app.md))
 - **Data:** 2026-11-09
 
 ## Contexto

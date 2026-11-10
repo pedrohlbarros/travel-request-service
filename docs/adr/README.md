@@ -5,7 +5,7 @@ Uma decisão por arquivo: contexto, decisão, consequências. Numeração sequen
 | # | Decisão | Status |
 |---|---|---|
 | [0001](0001-stack-e-runtime.md) | Stack e runtime: PHP 8.5, Laravel, Octane + Swoole, MySQL | Aceito |
-| [0002](0002-arquitetura-ddd-hexagonal.md) | DDD + Hexagonal, 3 bounded contexts, camadas no topo | Aceito |
+| [0002](0002-arquitetura-ddd-hexagonal.md) | DDD + Hexagonal, 3 bounded contexts, camadas no topo | Aceito (`app/` substituído por 0025) |
 | [0003](0003-regras-de-negocio-do-pedido.md) | Regras de negócio do pedido e ambiguidades do enunciado | Aceito |
 | [0004](0004-autorizacao-role-e-policies.md) | Autorização com enum `role` + Policies | Aceito |
 | [0005](0005-autenticacao-jwt.md) | Autenticação JWT (RS256, 15 min / 7 dias, refresh rotativo no MySQL) e usuários | Aceito |
@@ -22,5 +22,12 @@ Uma decisão por arquivo: contexto, decisão, consequências. Numeração sequen
 | [0016](0016-convencoes-da-api.md) | API: /api/v1, ações de status, cursor, snake_case, RFC 9457, Scramble | Aceito |
 | [0017](0017-identificadores-uuidv7.md) | IDs UUIDv7 gerados no domínio | Aceito |
 | [0018](0018-padrao-de-testes.md) | Testes: espelho de src/, MySQL real, fakes, Infection MSI ≥ 90% | Aceito |
-| [0019](0019-automacao-de-qualidade.md) | Makefile, GitHub Actions, CaptainHook | Aceito |
+| [0019](0019-automacao-de-qualidade.md) | Makefile, GitHub Actions, CaptainHook | Aceito (CI substituído por 0021) |
 | [0020](0020-canais-de-notificacao.md) | Canais de notificação: mail, database, broadcast (Reverb) | Aceito |
+| [0021](0021-ci-com-docker-compose.md) | CI com Docker Compose (substitui trecho de CI do 0019) | Aceito |
+| [0022](0022-imagem-base-e-versoes.md) | Imagem base Alpine e versões dos serviços (ressalva de performance do musl) | Aceito |
+| [0023](0023-dependencias-e-drivers-da-fundacao.md) | Dependências e drivers da fundação: phpredis, php-amqplib, PCOV, CaptainHook, skeleton enxuto, namespaces | Aceito |
+| [0024](0024-modulo-shared-e-regras-do-deptrac.md) | Módulo Shared por camada e regras do Deptrac (refina 0002) | Aceito (wiring em `app/` substituído por 0025) |
+| [0025](0025-providers-por-contexto-sem-app.md) | Providers por context e camada, sem `app/` | Aceito |
+| [0026](0026-codigo-semantico.md) | Código semântico e nomes (complementa 0014) | Aceito |
+| [0027](0027-complexidade-cognitiva.md) | Complexidade cognitiva no PHPStan (função ≤ 9, classe ≤ 40) | Aceito |

@@ -1,6 +1,6 @@
 # 0019 — Automação das checagens
 
-- **Status:** Aceito
+- **Status:** Aceito (trecho de CI substituído por [0021](0021-ci-com-docker-compose.md))
 - **Data:** 2026-11-09
 
 ## Decisão
@@ -14,7 +14,7 @@
   - **Carga:** cada cenário k6 (smoke, load, stress, concorrência).
   - **Perfis:** `obs`, `load`, `web`.
 - Toda ação nova útil para testar ou validar ganha um alvo.
-- **GitHub Actions** no push/PR com o mesmo pipeline de qualidade, MySQL/Redis/RabbitMQ como services. Badge no README.
+- **GitHub Actions** no push/PR com o mesmo pipeline de qualidade (forma de execução: ver [0021](0021-ci-com-docker-compose.md)). Badge no README.
 - **CaptainHook:**
   - `pre-commit`: Pint nos arquivos staged + PHPStan.
   - `commit-msg`: valida **Conventional Commits** (mensagens em inglês).
