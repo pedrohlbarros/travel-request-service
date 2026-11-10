@@ -1,0 +1,17 @@
+deptrac:
+  paths:
+    - ./src
+  layers:
+    - name: TravelRequest
+      collectors: [{ type: classNameRegex, value: '#^(Domain|Application|Infrastructure|Interfaces\\Http|Interfaces)\\TravelRequest\\#' }]
+    - name: Identity
+      collectors: [{ type: classNameRegex, value: '#^(Domain|Application|Infrastructure|Interfaces\\Http|Interfaces)\\Identity\\#' }]
+    - name: Notification
+      collectors: [{ type: classNameRegex, value: '#^(Domain|Application|Infrastructure|Interfaces\\Http|Interfaces)\\Notification\\#' }]
+    - name: Shared
+      collectors: [{ type: classNameRegex, value: '#^(Domain|Application|Infrastructure|Interfaces\\Http|Interfaces)\\Shared\\#' }]
+  ruleset:
+    TravelRequest: [Shared]
+    Identity: [Shared]
+    Notification: [Shared]
+    Shared: ~

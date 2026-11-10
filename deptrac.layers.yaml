@@ -1,0 +1,23 @@
+deptrac:
+  paths:
+    - ./src
+  analyser:
+    types: [class, class_superglobal, use, file, function]
+  layers:
+    - name: Domain
+      collectors: [{ type: directory, value: src/Domain/.* }]
+    - name: Application
+      collectors: [{ type: directory, value: src/Application/.* }]
+    - name: Infrastructure
+      collectors: [{ type: directory, value: src/Infrastructure/.* }]
+    - name: Interfaces
+      collectors: [{ type: directory, value: src/Interfaces/.* }]
+    - name: Framework
+      collectors:
+        - { type: classNameRegex, value: '#^Illuminate\\#' }
+        - { type: classNameRegex, value: '#^Laravel\\#' }
+  ruleset:
+    Domain: ~
+    Application: [Domain]
+    Infrastructure: [Application, Domain, Framework]
+    Interfaces: [Application, Domain, Framework]

@@ -1,0 +1,28 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+    - vendor/phpstan/phpstan-strict-rules/rules.neon
+    - vendor/phpstan/phpstan-deprecation-rules/rules.neon
+    - vendor/tomasvotruba/cognitive-complexity/config/extension.neon
+
+parameters:
+    level: max
+    paths:
+        - bootstrap/app.php
+        - config
+        - database
+        - routes
+        - src
+        - tests
+        - tools
+    excludePaths:
+        - tests/Tools/PHPStan/Fixtures
+    tmpDir: storage/phpstan
+    checkMissingCallableSignature: true
+    reportUnmatchedIgnoredErrors: true
+    cognitive_complexity:
+        function: 9
+        class: 40
+
+rules:
+    - Tools\PHPStan\NoFrameworkFunctionsInCoreRule
+    - Tools\PHPStan\NoVagueVariableNamesRule
