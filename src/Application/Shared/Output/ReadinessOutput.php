@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Application\Shared\Health;
+namespace Application\Shared\Output;
 
-final readonly class ReadinessReport
+final readonly class ReadinessOutput
 {
     /**
      * @param array<string, bool> $checks check name => is healthy

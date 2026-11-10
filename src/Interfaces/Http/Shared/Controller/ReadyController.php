@@ -2,32 +2,31 @@
 
 declare(strict_types=1);
 
-namespace Interfaces\Http\Shared\Health;
+namespace Interfaces\Http\Shared\Controller;
 
-use Application\Shared\Health\CheckReadiness;
-use Application\Shared\Health\CheckReadinessHandler;
+use Application\Shared\UseCase\CheckReadinessUseCase;
 use Illuminate\Http\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class ReadyController
 {
     public function __construct(
-        private CheckReadinessHandler $handler,
+        private CheckReadinessUseCase $useCase,
     ) {}
 
     public function __invoke(): JsonResponse
     {
-        $report = $this->handler->handle(new CheckReadiness());
+        $readiness = $this->useCase->execute();
 
         return new JsonResponse(
             [
-                'status' => $report->isReady() ? 'ok' : 'unavailable',
+                'status' => $readiness->isReady() ? 'ok' : 'unavailable',
                 'checks' => array_map(
                     static fn(bool $isHealthy): string => $isHealthy ? 'ok' : 'fail',
-                    $report->checks,
+                    $readiness->checks,
                 ),
             ],
-            $report->isReady() ? Response::HTTP_OK : Response::HTTP_SERVICE_UNAVAILABLE,
+            $readiness->isReady() ? Response::HTTP_OK : Response::HTTP_SERVICE_UNAVAILABLE,
         );
     }
 }

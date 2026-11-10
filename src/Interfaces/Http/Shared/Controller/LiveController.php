@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Interfaces\Http\Shared\Health;
+namespace Interfaces\Http\Shared\Controller;
 
 use Illuminate\Http\JsonResponse;
 

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Tests\Interfaces\Http\Shared\Health;
+namespace Tests\Interfaces\Http\Shared\Controller;
 
-use Application\Shared\Health\CheckReadinessHandler;
+use Application\Shared\UseCase\CheckReadinessUseCase;
 use Infrastructure\Shared\SharedServiceProvider;
 use Tests\Support\LaravelTestCase;
-use Tests\Support\Shared\Health\FixedHealthCheck;
+use Tests\Support\Shared\Port\FixedHealthCheck;
 
 final class HealthEndpointsTest extends LaravelTestCase
 {
@@ -32,7 +32,7 @@ final class HealthEndpointsTest extends LaravelTestCase
 
     public function test_ReadyAnswersServiceUnavailableWhenAnyDependencyIsDown(): void
     {
-        $this->app->instance(CheckReadinessHandler::class, new CheckReadinessHandler([
+        $this->app->instance(CheckReadinessUseCase::class, new CheckReadinessUseCase([
             FixedHealthCheck::healthy('mysql'),
             FixedHealthCheck::unhealthy('redis'),
         ]));

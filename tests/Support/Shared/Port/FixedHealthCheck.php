@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Tests\Support\Shared\Health;
+namespace Tests\Support\Shared\Port;
 
-use Application\Shared\Health\HealthCheck;
+use Application\Shared\Port\HealthCheck;
 
 final readonly class FixedHealthCheck implements HealthCheck
 {

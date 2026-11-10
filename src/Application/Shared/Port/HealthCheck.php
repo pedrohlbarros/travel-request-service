@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Application\Shared\Health;
+namespace Application\Shared\Port;
 
 interface HealthCheck
 {

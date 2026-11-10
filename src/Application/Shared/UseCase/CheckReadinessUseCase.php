@@ -2,9 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Application\Shared\Health;
+namespace Application\Shared\UseCase;
 
-final readonly class CheckReadinessHandler
+use Application\Shared\Output\ReadinessOutput;
+use Application\Shared\Port\HealthCheck;
+
+final readonly class CheckReadinessUseCase
 {
     /**
      * @param iterable<HealthCheck> $checks
@@ -13,7 +16,7 @@ final readonly class CheckReadinessHandler
         private iterable $checks,
     ) {}
 
-    public function handle(CheckReadiness $query): ReadinessReport
+    public function execute(): ReadinessOutput
     {
         $isHealthyByCheckName = [];
 
@@ -21,6 +24,6 @@ final readonly class CheckReadinessHandler
             $isHealthyByCheckName[$check->name()] = $check->isHealthy();
         }
 
-        return new ReadinessReport($isHealthyByCheckName);
+        return new ReadinessOutput($isHealthyByCheckName);
     }
 }
