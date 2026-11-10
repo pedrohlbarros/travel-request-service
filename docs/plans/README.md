@@ -2,11 +2,11 @@
 
 Uma fase por arquivo. Fluxo de cada fase:
 
-1. **Proposto** → o usuário revisa o plano e aprova o início (status **Aprovado para início**).
+1. **Proposto** → o usuário revisa o plano e aprova o início (status **Aprovado para início**). A branch `phase/NN-...` nasce da `main` atualizada.
 2. Implementação com testes, seguindo os ADRs.
 3. `make qa` verde + roteiro de **validação manual** do plano executado pelo usuário.
 4. **Aprovação manual explícita** do usuário → status **Concluído** com data.
-5. Claude propõe a tabela de commits, o usuário confirma, Claude commita um a um e faz push. Só então começa a próxima fase.
+5. Claude propõe a tabela de commits, o usuário confirma, Claude commita um a um na branch `phase/NN-...`, faz push e abre o PR. O CI roda no PR e o usuário faz o merge. Só então começa a próxima fase.
 
 Nenhuma decisão nova é tomada dentro de uma fase sem aval; o que surgir vira pergunta e, se aceito, ADR.
 
