@@ -1,6 +1,6 @@
 # 0024 — Módulo Shared e regras de dependência do Deptrac
 
-- **Status:** Aceito (wiring em `app/` substituído por [0025](0025-providers-por-contexto-sem-app.md))
+- **Status:** Aceito (wiring em `app/` substituído por [0025](0025-providers-por-contexto-sem-app.md); pastas do exemplo reorganizadas por tipo no [0029](0029-organizacao-por-tipo-e-use-cases.md))
 - **Data:** 2026-11-09
 - **Refina:** [0002](0002-arquitetura-ddd-hexagonal.md)
 

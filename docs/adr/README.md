@@ -18,7 +18,7 @@ Uma decisão por arquivo: contexto, decisão, consequências. Numeração sequen
 | [0012](0012-destino-como-string.md) | Destino como string no pedido | Aceito |
 | [0013](0013-documentacao.md) | Organização da documentação e README enxuto | Aceito |
 | [0014](0014-padrao-de-codigo.md) | Padrão de código: Pint (PER), PHPStan max, Deptrac, strict/final/readonly, docblock mínimo | Aceito |
-| [0015](0015-camada-application-cqrs.md) | Casos de uso: Command/Query + Handler, sem bus | Aceito |
+| [0015](0015-camada-application-cqrs.md) | Casos de uso: Command/Query + Handler, sem bus | Aceito (nomenclatura substituída por 0029) |
 | [0016](0016-convencoes-da-api.md) | API: /api/v1, ações de status, cursor, snake_case, RFC 9457, Scramble | Aceito |
 | [0017](0017-identificadores-uuidv7.md) | IDs UUIDv7 gerados no domínio | Aceito |
 | [0018](0018-padrao-de-testes.md) | Testes: espelho de src/, MySQL real, fakes, Infection MSI ≥ 90% | Aceito |
@@ -31,3 +31,5 @@ Uma decisão por arquivo: contexto, decisão, consequências. Numeração sequen
 | [0025](0025-providers-por-contexto-sem-app.md) | Providers por context e camada, sem `app/` | Aceito |
 | [0026](0026-codigo-semantico.md) | Código semântico e nomes (complementa 0014) | Aceito |
 | [0027](0027-complexidade-cognitiva.md) | Complexidade cognitiva no PHPStan (função ≤ 9, classe ≤ 40) | Aceito |
+| [0028](0028-modelagem-do-dominio-travel-request.md) | Modelagem do domínio TravelRequest: IDs, validações, edição só pelo dono, escopo da fase 01 | Aceito |
+| [0029](0029-organizacao-por-tipo-e-use-cases.md) | Pastas por tipo em todas as camadas; `<Ação>UseCase::execute()` com Input/Output (substitui nomenclatura do 0015) | Aceito |
