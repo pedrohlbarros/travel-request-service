@@ -12,9 +12,9 @@ final class CheckReadinessUseCaseTest extends TestCase
 {
     public function test_IsReadyWhenEveryCheckIsHealthy(): void
     {
-        $useCase = new CheckReadinessUseCase([
-            FixedHealthCheck::healthy('mysql'),
-            FixedHealthCheck::healthy('redis'),
+        $useCase = new CheckReadinessUseCase(checks: [
+            FixedHealthCheck::healthy(name: 'mysql'),
+            FixedHealthCheck::healthy(name: 'redis'),
         ]);
 
         $readiness = $useCase->execute();
@@ -25,10 +25,10 @@ final class CheckReadinessUseCaseTest extends TestCase
 
     public function test_IsNotReadyWhenAnyCheckIsUnhealthy(): void
     {
-        $useCase = new CheckReadinessUseCase([
-            FixedHealthCheck::healthy('mysql'),
-            FixedHealthCheck::unhealthy('rabbitmq'),
-            FixedHealthCheck::healthy('redis'),
+        $useCase = new CheckReadinessUseCase(checks: [
+            FixedHealthCheck::healthy(name: 'mysql'),
+            FixedHealthCheck::unhealthy(name: 'rabbitmq'),
+            FixedHealthCheck::healthy(name: 'redis'),
         ]);
 
         $readiness = $useCase->execute();
@@ -39,7 +39,7 @@ final class CheckReadinessUseCaseTest extends TestCase
 
     public function test_IsReadyWithoutChecks(): void
     {
-        $useCaseWithoutChecks = new CheckReadinessUseCase([]);
+        $useCaseWithoutChecks = new CheckReadinessUseCase(checks: []);
 
         $readiness = $useCaseWithoutChecks->execute();
 

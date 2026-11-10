@@ -21,7 +21,8 @@
         "native_function_invocation": false,
         "void_return": true,
         "strict_comparison": true,
-        "strict_param": true
+        "strict_param": true,
+        "method_chaining_indentation": true
     },
     "exclude": [
         "bootstrap/cache",

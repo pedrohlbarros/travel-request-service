@@ -48,18 +48,18 @@ final class TravelRequest
         TravelPeriod $period,
         DateTimeImmutable $requestedAt,
     ): self {
-        $period->assertDepartsOnOrAfterDayOf($requestedAt);
+        $period->assertDepartsOnOrAfterDayOf(moment: $requestedAt);
 
         return new self(
-            $id,
-            $requesterId,
-            $destination,
-            $period,
-            TravelRequestStatus::Requested,
-            self::FIRST_VERSION,
-            $requestedAt,
-            $requestedAt,
-            null,
+            id: $id,
+            requesterId: $requesterId,
+            destination: $destination,
+            period: $period,
+            status: TravelRequestStatus::Requested,
+            version: self::FIRST_VERSION,
+            createdAt: $requestedAt,
+            updatedAt: $requestedAt,
+            decidedBy: null,
         );
     }
 
@@ -74,7 +74,17 @@ final class TravelRequest
         DateTimeImmutable $updatedAt,
         ?UserId $decidedBy,
     ): self {
-        return new self($id, $requesterId, $destination, $period, $status, $version, $createdAt, $updatedAt, $decidedBy);
+        return new self(
+            id: $id,
+            requesterId: $requesterId,
+            destination: $destination,
+            period: $period,
+            status: $status,
+            version: $version,
+            createdAt: $createdAt,
+            updatedAt: $updatedAt,
+            decidedBy: $decidedBy,
+        );
     }
 
     /**
@@ -83,7 +93,11 @@ final class TravelRequest
     public function assertVersionIs(int $expectedVersion): void
     {
         if ($this->version !== $expectedVersion) {
-            throw TravelRequestVersionMismatch::expected($this->id, $expectedVersion, $this->version);
+            throw TravelRequestVersionMismatch::expected(
+                id: $this->id,
+                expectedVersion: $expectedVersion,
+                currentVersion: $this->version,
+            );
         }
     }
 
@@ -98,19 +112,19 @@ final class TravelRequest
         TravelPeriod $period,
         DateTimeImmutable $changedAt,
     ): void {
-        if (! $this->requesterId->equals($editorId)) {
-            throw TravelRequestNotOwned::by($this->id, $editorId);
+        if (! $this->requesterId->equals(other: $editorId)) {
+            throw TravelRequestNotOwned::by(id: $this->id, userId: $editorId);
         }
 
         if ($this->status !== TravelRequestStatus::Requested) {
-            throw TravelRequestNotEditable::inStatus($this->id, $this->status);
+            throw TravelRequestNotEditable::inStatus(id: $this->id, status: $this->status);
         }
 
-        $period->assertDepartsOnOrAfterDayOf($changedAt);
+        $period->assertDepartsOnOrAfterDayOf(moment: $changedAt);
 
         $this->destination = $destination;
         $this->period = $period;
-        $this->advanceVersion($changedAt);
+        $this->advanceVersion(changedAt: $changedAt);
     }
 
     /**
@@ -118,16 +132,16 @@ final class TravelRequest
      */
     public function approve(UserId $approverId, DateTimeImmutable $approvedAt): void
     {
-        $this->decide(TravelRequestStatus::Approved, $approverId, $approvedAt);
+        $this->decide(targetStatus: TravelRequestStatus::Approved, deciderId: $approverId, decidedAt: $approvedAt);
 
         $this->recordedEvents[] = new TravelRequestApproved(
-            $this->id,
-            $this->requesterId,
-            $approverId,
-            $this->destination,
-            $this->period,
-            $this->version,
-            $approvedAt,
+            travelRequestId: $this->id,
+            requesterId: $this->requesterId,
+            approvedBy: $approverId,
+            destination: $this->destination,
+            period: $this->period,
+            version: $this->version,
+            occurredAt: $approvedAt,
         );
     }
 
@@ -136,16 +150,16 @@ final class TravelRequest
      */
     public function cancel(UserId $cancellerId, DateTimeImmutable $cancelledAt): void
     {
-        $this->decide(TravelRequestStatus::Cancelled, $cancellerId, $cancelledAt);
+        $this->decide(targetStatus: TravelRequestStatus::Cancelled, deciderId: $cancellerId, decidedAt: $cancelledAt);
 
         $this->recordedEvents[] = new TravelRequestCancelled(
-            $this->id,
-            $this->requesterId,
-            $cancellerId,
-            $this->destination,
-            $this->period,
-            $this->version,
-            $cancelledAt,
+            travelRequestId: $this->id,
+            requesterId: $this->requesterId,
+            cancelledBy: $cancellerId,
+            destination: $this->destination,
+            period: $this->period,
+            version: $this->version,
+            occurredAt: $cancelledAt,
         );
     }
 
@@ -166,12 +180,16 @@ final class TravelRequest
     private function decide(TravelRequestStatus $targetStatus, UserId $deciderId, DateTimeImmutable $decidedAt): void
     {
         if ($this->status !== TravelRequestStatus::Requested) {
-            throw InvalidStatusTransition::between($this->id, $this->status, $targetStatus);
+            throw InvalidStatusTransition::between(
+                id: $this->id,
+                currentStatus: $this->status,
+                targetStatus: $targetStatus,
+            );
         }
 
         $this->status = $targetStatus;
         $this->decidedBy = $deciderId;
-        $this->advanceVersion($decidedAt);
+        $this->advanceVersion(changedAt: $decidedAt);
     }
 
     private function advanceVersion(DateTimeImmutable $changedAt): void

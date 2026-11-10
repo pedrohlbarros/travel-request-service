@@ -31,10 +31,10 @@ final readonly class AssignRequestContext
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $requestId = $this->requestIdFor($request);
+        $requestId = $this->requestIdFor(request: $request);
         $this->context->add('request_id', $requestId);
 
-        $traceId = $this->traceIdFrom($request);
+        $traceId = $this->traceIdFrom(request: $request);
         if ($traceId !== null) {
             $this->context->add('trace_id', $traceId);
         }
@@ -53,7 +53,8 @@ final readonly class AssignRequestContext
             return $clientRequestId;
         }
 
-        return Str::uuid7()->toString();
+        return Str::uuid7()
+            ->toString();
     }
 
     private function traceIdFrom(Request $request): ?string

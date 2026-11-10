@@ -27,9 +27,14 @@ final class HealthChecksTest extends LaravelTestCase
 
     public function test_MySqlCheckIsUnhealthyWhenDatabaseIsUnreachable(): void
     {
-        $this->app->make('config')->set('database.connections.mysql.host', self::UNREACHABLE_HOST);
-        $this->app->make('db')->purge('mysql');
-        $check = new MySqlHealthCheck($this->app->make(ConnectionResolverInterface::class), new NullLogger());
+        $this->app->make('config')
+            ->set('database.connections.mysql.host', self::UNREACHABLE_HOST);
+        $this->app->make('db')
+            ->purge('mysql');
+        $check = new MySqlHealthCheck(
+            connections: $this->app->make(ConnectionResolverInterface::class),
+            logger: new NullLogger(),
+        );
 
         $isHealthy = $check->isHealthy();
 
@@ -46,9 +51,11 @@ final class HealthChecksTest extends LaravelTestCase
 
     public function test_RedisCheckIsUnhealthyWhenRedisIsUnreachable(): void
     {
-        $this->app->make('config')->set('database.redis.default.host', self::UNREACHABLE_HOST);
-        $this->app->make('redis')->purge('default');
-        $check = new RedisHealthCheck($this->app->make(RedisFactory::class), new NullLogger());
+        $this->app->make('config')
+            ->set('database.redis.default.host', self::UNREACHABLE_HOST);
+        $this->app->make('redis')
+            ->purge('default');
+        $check = new RedisHealthCheck(redis: $this->app->make(RedisFactory::class), logger: new NullLogger());
 
         $isHealthy = $check->isHealthy();
 
@@ -66,10 +73,23 @@ final class HealthChecksTest extends LaravelTestCase
     public function test_RabbitMqCheckIsUnhealthyWithWrongCredentials(): void
     {
         $configuredCredentials = $this->app->make(RabbitMqConnectionFactory::class);
-        $wrongCredentials = new RabbitMqConnectionFactory('rabbitmq', 5672, 'nobody', 'wrong-password', '/', 1.0);
+        $wrongCredentials = new RabbitMqConnectionFactory(
+            host: 'rabbitmq',
+            port: 5672,
+            user: 'nobody',
+            password: 'wrong-password',
+            vhost: '/',
+            timeoutSeconds: 1.0,
+        );
 
-        $isHealthyWithConfiguredCredentials = new RabbitMqHealthCheck($configuredCredentials, new NullLogger())->isHealthy();
-        $isHealthyWithWrongCredentials = new RabbitMqHealthCheck($wrongCredentials, new NullLogger())->isHealthy();
+        $isHealthyWithConfiguredCredentials = new RabbitMqHealthCheck(
+            connections: $configuredCredentials,
+            logger: new NullLogger(),
+        )->isHealthy();
+        $isHealthyWithWrongCredentials = new RabbitMqHealthCheck(
+            connections: $wrongCredentials,
+            logger: new NullLogger(),
+        )->isHealthy();
 
         self::assertTrue($isHealthyWithConfiguredCredentials);
         self::assertFalse($isHealthyWithWrongCredentials);

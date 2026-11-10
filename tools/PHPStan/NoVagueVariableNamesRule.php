@@ -43,8 +43,8 @@ final readonly class NoVagueVariableNamesRule implements Rule
     {
         $errors = [];
 
-        foreach ($this->declaredNames($node) as $declaredName) {
-            $error = $this->errorFor($declaredName, $node->getStartLine());
+        foreach ($this->declaredNames(node: $node) as $declaredName) {
+            $error = $this->errorFor(name: $declaredName, line: $node->getStartLine());
 
             if ($error !== null) {
                 $errors[] = $error;
@@ -60,10 +60,10 @@ final readonly class NoVagueVariableNamesRule implements Rule
     private function declaredNames(Node $node): array
     {
         return match (true) {
-            $node instanceof Param => $this->namesIn($node->var),
-            $node instanceof Assign, $node instanceof AssignRef => $this->namesIn($node->var),
-            $node instanceof Foreach_ => [...$this->namesIn($node->keyVar), ...$this->namesIn($node->valueVar)],
-            $node instanceof Catch_ => $this->namesIn($node->var),
+            $node instanceof Param => $this->namesIn(target: $node->var),
+            $node instanceof Assign, $node instanceof AssignRef => $this->namesIn(target: $node->var),
+            $node instanceof Foreach_ => [...$this->namesIn(target: $node->keyVar), ...$this->namesIn(target: $node->valueVar)],
+            $node instanceof Catch_ => $this->namesIn(target: $node->var),
             $node instanceof Property => array_values(array_map(
                 static fn(Node\PropertyItem $property): string => $property->name->toString(),
                 $node->props,
@@ -85,7 +85,7 @@ final readonly class NoVagueVariableNamesRule implements Rule
             $names = [];
 
             foreach ($target->items as $listItem) {
-                $names = [...$names, ...$this->namesIn($listItem?->value)];
+                $names = [...$names, ...$this->namesIn(target: $listItem?->value)];
             }
 
             return $names;

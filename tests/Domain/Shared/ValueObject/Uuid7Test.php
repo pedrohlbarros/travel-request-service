@@ -15,14 +15,14 @@ final class Uuid7Test extends TestCase
 
     public function test_AcceptsCanonicalUuid7(): void
     {
-        $uuid = Uuid7::fromString(self::CANONICAL_UUID7);
+        $uuid = Uuid7::fromString(candidate: self::CANONICAL_UUID7);
 
         self::assertSame(self::CANONICAL_UUID7, $uuid->value);
     }
 
     public function test_NormalizesUppercaseToLowercase(): void
     {
-        $uuid = Uuid7::fromString(strtoupper(self::CANONICAL_UUID7));
+        $uuid = Uuid7::fromString(candidate: strtoupper(self::CANONICAL_UUID7));
 
         self::assertSame(self::CANONICAL_UUID7, $uuid->value);
     }
@@ -50,16 +50,16 @@ final class Uuid7Test extends TestCase
     {
         $this->expectException(InvalidIdentifier::class);
 
-        Uuid7::fromString($candidate);
+        Uuid7::fromString(candidate: $candidate);
     }
 
     public function test_EqualsSameValueRegardlessOfCase(): void
     {
-        $lowercase = Uuid7::fromString(self::CANONICAL_UUID7);
-        $uppercase = Uuid7::fromString(strtoupper(self::CANONICAL_UUID7));
-        $different = Uuid7::fromString('019a6a10-aaaa-7bbb-8ccc-0123456789ac');
+        $lowercase = Uuid7::fromString(candidate: self::CANONICAL_UUID7);
+        $uppercase = Uuid7::fromString(candidate: strtoupper(self::CANONICAL_UUID7));
+        $different = Uuid7::fromString(candidate: '019a6a10-aaaa-7bbb-8ccc-0123456789ac');
 
-        self::assertTrue($lowercase->equals($uppercase));
-        self::assertFalse($lowercase->equals($different));
+        self::assertTrue($lowercase->equals(other: $uppercase));
+        self::assertFalse($lowercase->equals(other: $different));
     }
 }

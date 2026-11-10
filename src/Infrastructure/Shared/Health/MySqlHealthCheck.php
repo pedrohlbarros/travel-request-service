@@ -24,7 +24,8 @@ final readonly class MySqlHealthCheck implements HealthCheck
     public function isHealthy(): bool
     {
         try {
-            $this->connections->connection()->select('SELECT 1');
+            $this->connections->connection()
+                ->select('SELECT 1');
 
             return true;
         } catch (Throwable $exception) {

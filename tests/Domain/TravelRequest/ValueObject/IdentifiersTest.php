@@ -14,33 +14,37 @@ final class IdentifiersTest extends TestCase
 {
     public function test_TravelRequestIdKeepsCanonicalValue(): void
     {
-        $id = TravelRequestId::fromString(strtoupper(TravelRequestMother::TRAVEL_REQUEST_ID));
+        $id = TravelRequestId::fromString(id: strtoupper(TravelRequestMother::TRAVEL_REQUEST_ID));
+        $sameId = TravelRequestId::fromString(id: TravelRequestMother::TRAVEL_REQUEST_ID);
+        $otherId = TravelRequestId::fromString(id: TravelRequestMother::REQUESTER_ID);
 
         self::assertSame(TravelRequestMother::TRAVEL_REQUEST_ID, $id->toString());
-        self::assertTrue($id->equals(TravelRequestId::fromString(TravelRequestMother::TRAVEL_REQUEST_ID)));
-        self::assertFalse($id->equals(TravelRequestId::fromString(TravelRequestMother::REQUESTER_ID)));
+        self::assertTrue($id->equals(other: $sameId));
+        self::assertFalse($id->equals(other: $otherId));
     }
 
     public function test_UserIdKeepsCanonicalValue(): void
     {
-        $id = UserId::fromString(strtoupper(TravelRequestMother::REQUESTER_ID));
+        $id = UserId::fromString(id: strtoupper(TravelRequestMother::REQUESTER_ID));
+        $sameId = UserId::fromString(id: TravelRequestMother::REQUESTER_ID);
+        $otherId = UserId::fromString(id: TravelRequestMother::ADMIN_ID);
 
         self::assertSame(TravelRequestMother::REQUESTER_ID, $id->toString());
-        self::assertTrue($id->equals(UserId::fromString(TravelRequestMother::REQUESTER_ID)));
-        self::assertFalse($id->equals(UserId::fromString(TravelRequestMother::ADMIN_ID)));
+        self::assertTrue($id->equals(other: $sameId));
+        self::assertFalse($id->equals(other: $otherId));
     }
 
     public function test_TravelRequestIdRejectsInvalidUuid(): void
     {
         $this->expectException(InvalidIdentifier::class);
 
-        TravelRequestId::fromString('not-a-uuid');
+        TravelRequestId::fromString(id: 'not-a-uuid');
     }
 
     public function test_UserIdRejectsInvalidUuid(): void
     {
         $this->expectException(InvalidIdentifier::class);
 
-        UserId::fromString('not-a-uuid');
+        UserId::fromString(id: 'not-a-uuid');
     }
 }

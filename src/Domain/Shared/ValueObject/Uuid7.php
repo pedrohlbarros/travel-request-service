@@ -22,10 +22,10 @@ final readonly class Uuid7
         $lowercased = strtolower($candidate);
 
         if (preg_match(self::CANONICAL_UUID_V7, $lowercased) !== 1) {
-            throw InvalidIdentifier::notUuid7($candidate);
+            throw InvalidIdentifier::notUuid7(candidate: $candidate);
         }
 
-        return new self($lowercased);
+        return new self(value: $lowercased);
     }
 
     public function equals(self $other): bool

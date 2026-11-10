@@ -3,13 +3,13 @@ deptrac:
     - ./src
   layers:
     - name: TravelRequest
-      collectors: [{ type: classNameRegex, value: '#^(Domain|Application|Infrastructure|Interfaces\\Http|Interfaces)\\TravelRequest\\#' }]
+      collectors: [{ type: classNameRegex, value: '#^(Domain|Application|Infrastructure|Interfaces\\Http|Interfaces\\Console)\\TravelRequest\\#' }]
     - name: Identity
-      collectors: [{ type: classNameRegex, value: '#^(Domain|Application|Infrastructure|Interfaces\\Http|Interfaces)\\Identity\\#' }]
+      collectors: [{ type: classNameRegex, value: '#^(Domain|Application|Infrastructure|Interfaces\\Http|Interfaces\\Console)\\Identity\\#' }]
     - name: Notification
-      collectors: [{ type: classNameRegex, value: '#^(Domain|Application|Infrastructure|Interfaces\\Http|Interfaces)\\Notification\\#' }]
+      collectors: [{ type: classNameRegex, value: '#^(Domain|Application|Infrastructure|Interfaces\\Http|Interfaces\\Console)\\Notification\\#' }]
     - name: Shared
-      collectors: [{ type: classNameRegex, value: '#^(Domain|Application|Infrastructure|Interfaces\\Http|Interfaces)\\Shared\\#' }]
+      collectors: [{ type: classNameRegex, value: '#^(Domain|Application|Infrastructure|Interfaces\\Http|Interfaces\\Console)\\Shared\\#' }]
   ruleset:
     TravelRequest: [Shared]
     Identity: [Shared]

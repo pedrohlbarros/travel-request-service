@@ -15,11 +15,13 @@ final class InvalidStatusTransition extends BusinessRuleViolation
         TravelRequestStatus $currentStatus,
         TravelRequestStatus $targetStatus,
     ): self {
-        return new self(\sprintf(
+        $message = \sprintf(
             'Travel request %s cannot go from %s to %s.',
             $id->toString(),
             $currentStatus->value,
             $targetStatus->value,
-        ));
+        );
+
+        return new self($message);
     }
 }

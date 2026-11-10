@@ -13,7 +13,7 @@ final class DestinationTest extends TestCase
 {
     public function test_TrimsSurroundingWhitespace(): void
     {
-        $destination = Destination::fromString("  São Paulo \t");
+        $destination = Destination::fromString(name: "  São Paulo \t");
 
         self::assertSame('São Paulo', $destination->name);
     }
@@ -33,7 +33,7 @@ final class DestinationTest extends TestCase
     #[DataProvider('acceptedNames')]
     public function test_AcceptsNamesWithinLengthLimits(string $name): void
     {
-        $destination = Destination::fromString($name);
+        $destination = Destination::fromString(name: $name);
 
         self::assertSame($name, $destination->name);
     }
@@ -58,6 +58,6 @@ final class DestinationTest extends TestCase
         $this->expectException(InvalidDestination::class);
         $this->expectExceptionMessageIsOrContains('between 2 and 120 characters');
 
-        Destination::fromString($name);
+        Destination::fromString(name: $name);
     }
 }

@@ -27,47 +27,49 @@ final class CreateTravelRequestUseCaseTest extends TestCase
 
     protected function setUp(): void
     {
+        $clock = new FrozenClock(frozenAt: Mother::moment(moment: Mother::NOW));
         $this->travelRequests = new InMemoryTravelRequestRepository();
         $this->useCase = new CreateTravelRequestUseCase(
-            $this->travelRequests,
-            new SequentialIdentifierGenerator(),
-            new FrozenClock(Mother::moment(Mother::NOW)),
+            travelRequests: $this->travelRequests,
+            identifiers: new SequentialIdentifierGenerator(),
+            clock: $clock,
         );
     }
 
     public function test_UserCreatesTravelRequestForThemselves(): void
     {
         $input = new CreateTravelRequestInput(
-            Mother::REQUESTER_ID,
-            '  ' . Mother::DESTINATION . ' ',
-            Mother::moment(Mother::DEPARTURE_DATE),
-            Mother::moment(Mother::RETURN_DATE),
+            requesterId: Mother::REQUESTER_ID,
+            destination: '  ' . Mother::DESTINATION . ' ',
+            departureDate: Mother::moment(moment: Mother::DEPARTURE_DATE),
+            returnDate: Mother::moment(moment: Mother::RETURN_DATE),
         );
 
-        $created = $this->useCase->execute($input);
+        $created = $this->useCase->execute(input: $input);
 
-        $stored = $this->travelRequests->get(TravelRequestId::fromString($created->id));
-        self::assertEquals(TravelRequestOutput::fromEntity($stored), $created);
-        self::assertSame(SequentialIdentifierGenerator::nth(1), $created->id);
+        $stored = $this->travelRequests->get(id: TravelRequestId::fromString(id: $created->id));
+
+        self::assertEquals(TravelRequestOutput::fromEntity(travelRequest: $stored), $created);
+        self::assertSame(SequentialIdentifierGenerator::nth(sequence: 1), $created->id);
         self::assertSame(Mother::REQUESTER_ID, $stored->requesterId->toString());
         self::assertSame(Mother::DESTINATION, $stored->destination->name);
         self::assertEquals(Mother::period(), $stored->period);
         self::assertSame(TravelRequestStatus::Requested, $stored->status);
         self::assertSame(TravelRequest::FIRST_VERSION, $stored->version);
-        self::assertEquals(Mother::moment(Mother::NOW), $stored->createdAt);
+        self::assertEquals(Mother::moment(moment: Mother::NOW), $stored->createdAt);
     }
 
     public function test_EachTravelRequestGetsItsOwnId(): void
     {
         $input = new CreateTravelRequestInput(
-            Mother::REQUESTER_ID,
-            Mother::DESTINATION,
-            Mother::moment(Mother::DEPARTURE_DATE),
-            Mother::moment(Mother::RETURN_DATE),
+            requesterId: Mother::REQUESTER_ID,
+            destination: Mother::DESTINATION,
+            departureDate: Mother::moment(moment: Mother::DEPARTURE_DATE),
+            returnDate: Mother::moment(moment: Mother::RETURN_DATE),
         );
 
-        $first = $this->useCase->execute($input);
-        $second = $this->useCase->execute($input);
+        $first = $this->useCase->execute(input: $input);
+        $second = $this->useCase->execute(input: $input);
 
         self::assertNotSame($first->id, $second->id);
     }
@@ -76,35 +78,41 @@ final class CreateTravelRequestUseCaseTest extends TestCase
     {
         $this->expectException(InvalidIdentifier::class);
 
-        $this->useCase->execute(new CreateTravelRequestInput(
-            'not-a-uuid',
-            Mother::DESTINATION,
-            Mother::moment(Mother::DEPARTURE_DATE),
-            Mother::moment(Mother::RETURN_DATE),
-        ));
+        $input = new CreateTravelRequestInput(
+            requesterId: 'not-a-uuid',
+            destination: Mother::DESTINATION,
+            departureDate: Mother::moment(moment: Mother::DEPARTURE_DATE),
+            returnDate: Mother::moment(moment: Mother::RETURN_DATE),
+        );
+
+        $this->useCase->execute(input: $input);
     }
 
     public function test_RejectsInvalidDestination(): void
     {
         $this->expectException(InvalidDestination::class);
 
-        $this->useCase->execute(new CreateTravelRequestInput(
-            Mother::REQUESTER_ID,
-            ' ',
-            Mother::moment(Mother::DEPARTURE_DATE),
-            Mother::moment(Mother::RETURN_DATE),
-        ));
+        $input = new CreateTravelRequestInput(
+            requesterId: Mother::REQUESTER_ID,
+            destination: ' ',
+            departureDate: Mother::moment(moment: Mother::DEPARTURE_DATE),
+            returnDate: Mother::moment(moment: Mother::RETURN_DATE),
+        );
+
+        $this->useCase->execute(input: $input);
     }
 
     public function test_RejectsDepartureBeforeToday(): void
     {
         $this->expectException(InvalidTravelPeriod::class);
 
-        $this->useCase->execute(new CreateTravelRequestInput(
-            Mother::REQUESTER_ID,
-            Mother::DESTINATION,
-            Mother::moment('2026-11-08'),
-            Mother::moment(Mother::RETURN_DATE),
-        ));
+        $input = new CreateTravelRequestInput(
+            requesterId: Mother::REQUESTER_ID,
+            destination: Mother::DESTINATION,
+            departureDate: Mother::moment(moment: '2026-11-08'),
+            returnDate: Mother::moment(moment: Mother::RETURN_DATE),
+        );
+
+        $this->useCase->execute(input: $input);
     }
 }

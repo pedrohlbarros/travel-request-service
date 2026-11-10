@@ -2,10 +2,9 @@
 
 declare(strict_types=1);
 
-$arguments = array_values(array_filter(
-    is_array($_SERVER['argv'] ?? null) ? $_SERVER['argv'] : [],
-    'is_string',
-));
+$commandLine = is_array($_SERVER['argv'] ?? null) ? $_SERVER['argv'] : [];
+$stringArguments = array_filter($commandLine, 'is_string');
+$arguments = array_values($stringArguments);
 $cloverPath = $arguments[1] ?? 'build/coverage/clover.xml';
 $minimum = (float) ($arguments[2] ?? '85');
 
@@ -26,6 +25,12 @@ $statements = (int) $metrics['statements'];
 $covered = (int) $metrics['coveredstatements'];
 $percent = $statements === 0 ? 100.0 : $covered / $statements * 100;
 
-printf("Line coverage: %.2f%% (%d/%d), minimum %.2f%%\n", $percent, $covered, $statements, $minimum);
+printf(
+    "Line coverage: %.2f%% (%d/%d), minimum %.2f%%\n",
+    $percent,
+    $covered,
+    $statements,
+    $minimum,
+);
 
 exit($percent >= $minimum ? 0 : 1);

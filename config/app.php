@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+$previousKeys = explode(',', (string) env('APP_PREVIOUS_KEYS', ''));
+
 return [
 
     /*
@@ -102,10 +104,7 @@ return [
     'key' => env('APP_KEY'),
 
     'previous_keys' => [
-        ...array_filter(
-            explode(',', (string) env('APP_PREVIOUS_KEYS', '')),
-            static fn(string $key): bool => $key !== '',
-        ),
+        ...array_filter($previousKeys, static fn(string $key): bool => $key !== ''),
     ],
 
     /*

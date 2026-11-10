@@ -33,16 +33,17 @@ final readonly class CreateTravelRequestUseCase
      */
     public function execute(CreateTravelRequestInput $input): TravelRequestOutput
     {
+        $travelRequestId = TravelRequestId::fromString(id: $this->identifiers->uuid7());
         $travelRequest = TravelRequest::request(
-            TravelRequestId::fromString($this->identifiers->uuid7()),
-            UserId::fromString($input->requesterId),
-            Destination::fromString($input->destination),
-            TravelPeriod::between($input->departureDate, $input->returnDate),
-            $this->clock->now(),
+            id: $travelRequestId,
+            requesterId: UserId::fromString(id: $input->requesterId),
+            destination: Destination::fromString(name: $input->destination),
+            period: TravelPeriod::between(departureDate: $input->departureDate, returnDate: $input->returnDate),
+            requestedAt: $this->clock->now(),
         );
 
-        $this->travelRequests->add($travelRequest);
+        $this->travelRequests->add(travelRequest: $travelRequest);
 
-        return TravelRequestOutput::fromEntity($travelRequest);
+        return TravelRequestOutput::fromEntity(travelRequest: $travelRequest);
     }
 }

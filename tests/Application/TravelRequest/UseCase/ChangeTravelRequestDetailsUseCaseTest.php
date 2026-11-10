@@ -32,86 +32,109 @@ final class ChangeTravelRequestDetailsUseCaseTest extends TestCase
 
     protected function setUp(): void
     {
+        $clock = new FrozenClock(frozenAt: Mother::moment(moment: Mother::LATER));
         $this->travelRequests = new InMemoryTravelRequestRepository();
-        $this->useCase = new ChangeTravelRequestDetailsUseCase(
-            $this->travelRequests,
-            new FrozenClock(Mother::moment(Mother::LATER)),
-        );
+        $this->useCase = new ChangeTravelRequestDetailsUseCase(travelRequests: $this->travelRequests, clock: $clock);
     }
 
     public function test_RequesterChangesDestinationAndDates(): void
     {
-        $this->travelRequests->add(Mother::requested());
+        $this->travelRequests->add(travelRequest: Mother::requested());
 
-        $changed = $this->useCase->execute($this->changeBy(Mother::REQUESTER_ID, TravelRequest::FIRST_VERSION));
+        $changed = $this->useCase->execute(input: $this->changeBy(
+            editorId: Mother::REQUESTER_ID,
+            expectedVersion: TravelRequest::FIRST_VERSION,
+        ));
 
         $stored = $this->storedTravelRequest();
-        self::assertEquals(TravelRequestOutput::fromEntity($stored), $changed);
+
+        self::assertEquals(TravelRequestOutput::fromEntity(travelRequest: $stored), $changed);
         self::assertSame(self::NEW_DESTINATION, $stored->destination->name);
-        self::assertEquals(Mother::period(self::NEW_DEPARTURE_DATE, self::NEW_RETURN_DATE), $stored->period);
+        self::assertEquals(
+            Mother::period(departureDate: self::NEW_DEPARTURE_DATE, returnDate: self::NEW_RETURN_DATE),
+            $stored->period,
+        );
         self::assertSame(TravelRequest::FIRST_VERSION + 1, $stored->version);
-        self::assertEquals(Mother::moment(Mother::LATER), $stored->updatedAt);
+        self::assertEquals(Mother::moment(moment: Mother::LATER), $stored->updatedAt);
     }
 
     public function test_RejectsStaleExpectedVersion(): void
     {
-        $this->travelRequests->add(Mother::requested());
-        $this->useCase->execute($this->changeBy(Mother::REQUESTER_ID, TravelRequest::FIRST_VERSION));
+        $this->travelRequests->add(travelRequest: Mother::requested());
+        $this->useCase->execute(input: $this->changeBy(
+            editorId: Mother::REQUESTER_ID,
+            expectedVersion: TravelRequest::FIRST_VERSION,
+        ));
 
         $this->expectException(TravelRequestVersionMismatch::class);
 
-        $this->useCase->execute($this->changeBy(Mother::REQUESTER_ID, TravelRequest::FIRST_VERSION));
+        $this->useCase->execute(input: $this->changeBy(
+            editorId: Mother::REQUESTER_ID,
+            expectedVersion: TravelRequest::FIRST_VERSION,
+        ));
     }
 
     public function test_OtherUserCannotChangeDetails(): void
     {
-        $this->travelRequests->add(Mother::requested());
+        $this->travelRequests->add(travelRequest: Mother::requested());
 
         $this->expectException(TravelRequestNotOwned::class);
 
-        $this->useCase->execute($this->changeBy(Mother::OTHER_USER_ID, TravelRequest::FIRST_VERSION));
+        $this->useCase->execute(input: $this->changeBy(
+            editorId: Mother::OTHER_USER_ID,
+            expectedVersion: TravelRequest::FIRST_VERSION,
+        ));
     }
 
     public function test_AdminCannotChangeDetailsOfSomeoneElsesRequest(): void
     {
-        $this->travelRequests->add(Mother::requested());
+        $this->travelRequests->add(travelRequest: Mother::requested());
 
         $this->expectException(TravelRequestNotOwned::class);
 
-        $this->useCase->execute($this->changeBy(Mother::ADMIN_ID, TravelRequest::FIRST_VERSION));
+        $this->useCase->execute(input: $this->changeBy(
+            editorId: Mother::ADMIN_ID,
+            expectedVersion: TravelRequest::FIRST_VERSION,
+        ));
     }
 
     public function test_CannotChangeDetailsOfApprovedTravelRequest(): void
     {
         $approved = Mother::approved();
-        $this->travelRequests->add($approved);
+        $this->travelRequests->add(travelRequest: $approved);
 
         $this->expectException(TravelRequestNotEditable::class);
 
-        $this->useCase->execute($this->changeBy(Mother::REQUESTER_ID, $approved->version));
+        $this->useCase->execute(input: $this->changeBy(
+            editorId: Mother::REQUESTER_ID,
+            expectedVersion: $approved->version,
+        ));
     }
 
     public function test_FailsForUnknownTravelRequest(): void
     {
         $this->expectException(TravelRequestNotFound::class);
 
-        $this->useCase->execute($this->changeBy(Mother::REQUESTER_ID, TravelRequest::FIRST_VERSION));
+        $this->useCase->execute(input: $this->changeBy(
+            editorId: Mother::REQUESTER_ID,
+            expectedVersion: TravelRequest::FIRST_VERSION,
+        ));
     }
 
     private function changeBy(string $editorId, int $expectedVersion): ChangeTravelRequestDetailsInput
     {
         return new ChangeTravelRequestDetailsInput(
-            Mother::TRAVEL_REQUEST_ID,
-            $editorId,
-            $expectedVersion,
-            self::NEW_DESTINATION,
-            Mother::moment(self::NEW_DEPARTURE_DATE),
-            Mother::moment(self::NEW_RETURN_DATE),
+            travelRequestId: Mother::TRAVEL_REQUEST_ID,
+            editorId: $editorId,
+            expectedVersion: $expectedVersion,
+            destination: self::NEW_DESTINATION,
+            departureDate: Mother::moment(moment: self::NEW_DEPARTURE_DATE),
+            returnDate: Mother::moment(moment: self::NEW_RETURN_DATE),
         );
     }
 
     private function storedTravelRequest(): TravelRequest
     {
-        return $this->travelRequests->get(TravelRequestId::fromString(Mother::TRAVEL_REQUEST_ID));
+        return $this->travelRequests->get(id: TravelRequestId::fromString(id: Mother::TRAVEL_REQUEST_ID));
     }
 }

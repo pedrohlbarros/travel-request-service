@@ -28,10 +28,13 @@ final class AssignRequestContextTest extends LaravelTestCase
     {
         parent::setUp();
 
-        Route::get(self::CONTEXT_PROBE_URI, static fn(Context $context): JsonResponse => new JsonResponse([
-            'request_id' => $context->get('request_id'),
-            'trace_id' => $context->get('trace_id'),
-        ]));
+        Route::get(
+            self::CONTEXT_PROBE_URI,
+            static fn(Context $context): JsonResponse => new JsonResponse([
+                'request_id' => $context->get('request_id'),
+                'trace_id' => $context->get('trace_id'),
+            ]),
+        );
     }
 
     public function test_GeneratesUuidV7RequestIdWhenHeaderIsMissing(): void
@@ -39,6 +42,7 @@ final class AssignRequestContextTest extends LaravelTestCase
         $response = $this->getJson(self::CONTEXT_PROBE_URI);
 
         $generatedRequestId = $response->headers->get('X-Request-Id');
+
         self::assertTrue(Str::isUuid($generatedRequestId, self::UUID_VERSION_7));
         $response->assertJsonPath('request_id', $generatedRequestId);
     }

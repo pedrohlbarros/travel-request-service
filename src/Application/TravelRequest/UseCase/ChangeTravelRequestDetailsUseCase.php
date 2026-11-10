@@ -38,19 +38,19 @@ final readonly class ChangeTravelRequestDetailsUseCase
      */
     public function execute(ChangeTravelRequestDetailsInput $input): TravelRequestOutput
     {
-        $travelRequest = $this->travelRequests->get(TravelRequestId::fromString($input->travelRequestId));
+        $travelRequest = $this->travelRequests->get(id: TravelRequestId::fromString(id: $input->travelRequestId));
         $loadedVersion = $travelRequest->version;
-        $travelRequest->assertVersionIs($input->expectedVersion);
+        $travelRequest->assertVersionIs(expectedVersion: $input->expectedVersion);
 
         $travelRequest->changeDetails(
-            UserId::fromString($input->editorId),
-            Destination::fromString($input->destination),
-            TravelPeriod::between($input->departureDate, $input->returnDate),
-            $this->clock->now(),
+            editorId: UserId::fromString(id: $input->editorId),
+            destination: Destination::fromString(name: $input->destination),
+            period: TravelPeriod::between(departureDate: $input->departureDate, returnDate: $input->returnDate),
+            changedAt: $this->clock->now(),
         );
 
-        $this->travelRequests->update($travelRequest, $loadedVersion);
+        $this->travelRequests->update(travelRequest: $travelRequest, loadedVersion: $loadedVersion);
 
-        return TravelRequestOutput::fromEntity($travelRequest);
+        return TravelRequestOutput::fromEntity(travelRequest: $travelRequest);
     }
 }

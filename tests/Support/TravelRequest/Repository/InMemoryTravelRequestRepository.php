@@ -21,26 +21,33 @@ final class InMemoryTravelRequestRepository implements TravelRequestRepository
 
     public function get(TravelRequestId $id): TravelRequest
     {
-        $storedTravelRequest = $this->storedTravelRequestById[$id->toString()]
-            ?? throw TravelRequestNotFound::withId($id);
+        $storedTravelRequest = $this->storedTravelRequestById[$id->toString()] ?? null;
+
+        if ($storedTravelRequest === null) {
+            throw TravelRequestNotFound::withId(id: $id);
+        }
 
         return clone $storedTravelRequest;
     }
 
     public function add(TravelRequest $travelRequest): void
     {
-        $this->store($travelRequest);
+        $this->store(travelRequest: $travelRequest);
     }
 
     public function update(TravelRequest $travelRequest, int $loadedVersion): void
     {
-        $storedVersion = $this->get($travelRequest->id)->version;
+        $storedVersion = $this->get(id: $travelRequest->id)->version;
 
         if ($storedVersion !== $loadedVersion) {
-            throw TravelRequestVersionMismatch::expected($travelRequest->id, $loadedVersion, $storedVersion);
+            throw TravelRequestVersionMismatch::expected(
+                id: $travelRequest->id,
+                expectedVersion: $loadedVersion,
+                currentVersion: $storedVersion,
+            );
         }
 
-        $this->store($travelRequest);
+        $this->store(travelRequest: $travelRequest);
     }
 
     private function store(TravelRequest $travelRequest): void

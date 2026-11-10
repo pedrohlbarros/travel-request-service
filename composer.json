@@ -13,6 +13,7 @@
         "ext-swoole": "*",
         "laravel/framework": "^13.40",
         "laravel/octane": "^2.23",
+        "lcobucci/jwt": "^5.6",
         "php-amqplib/php-amqplib": "^3.7"
     },
     "require-dev": {

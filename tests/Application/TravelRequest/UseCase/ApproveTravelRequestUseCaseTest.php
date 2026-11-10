@@ -30,37 +30,48 @@ final class ApproveTravelRequestUseCaseTest extends TestCase
 
     protected function setUp(): void
     {
+        $clock = new FrozenClock(frozenAt: Mother::moment(moment: Mother::LATER));
         $this->travelRequests = new InMemoryTravelRequestRepository();
         $this->events = new SpyDomainEventPublisher();
         $this->useCase = new ApproveTravelRequestUseCase(
-            $this->travelRequests,
-            $this->events,
-            new FrozenClock(Mother::moment(Mother::LATER)),
+            travelRequests: $this->travelRequests,
+            events: $this->events,
+            clock: $clock,
         );
     }
 
     public function test_AdminApprovesRequestedTravelRequest(): void
     {
-        $this->travelRequests->add(Mother::requested());
+        $this->travelRequests->add(travelRequest: Mother::requested());
 
-        $changed = $this->useCase->execute(new ApproveTravelRequestInput(Mother::TRAVEL_REQUEST_ID, Mother::ADMIN_ID, TravelRequest::FIRST_VERSION));
+        $changed = $this->useCase->execute(input: new ApproveTravelRequestInput(
+            travelRequestId: Mother::TRAVEL_REQUEST_ID,
+            approverId: Mother::ADMIN_ID,
+            expectedVersion: TravelRequest::FIRST_VERSION,
+        ));
 
         $stored = $this->storedTravelRequest();
-        self::assertEquals(TravelRequestOutput::fromEntity($stored), $changed);
+
+        self::assertEquals(TravelRequestOutput::fromEntity(travelRequest: $stored), $changed);
         self::assertSame(TravelRequestStatus::Approved, $stored->status);
         self::assertSame(Mother::ADMIN_ID, $stored->decidedBy?->toString());
         self::assertSame(TravelRequest::FIRST_VERSION + 1, $stored->version);
-        self::assertEquals(Mother::moment(Mother::LATER), $stored->updatedAt);
+        self::assertEquals(Mother::moment(moment: Mother::LATER), $stored->updatedAt);
     }
 
     public function test_PublishesApprovedEventOnce(): void
     {
-        $this->travelRequests->add(Mother::requested());
+        $this->travelRequests->add(travelRequest: Mother::requested());
 
-        $this->useCase->execute(new ApproveTravelRequestInput(Mother::TRAVEL_REQUEST_ID, Mother::ADMIN_ID, TravelRequest::FIRST_VERSION));
+        $this->useCase->execute(input: new ApproveTravelRequestInput(
+            travelRequestId: Mother::TRAVEL_REQUEST_ID,
+            approverId: Mother::ADMIN_ID,
+            expectedVersion: TravelRequest::FIRST_VERSION,
+        ));
+
+        $published = $this->events->publishedEvents[0] ?? null;
 
         self::assertCount(1, $this->events->publishedEvents);
-        $published = $this->events->publishedEvents[0];
         self::assertInstanceOf(TravelRequestApproved::class, $published);
         self::assertSame(Mother::TRAVEL_REQUEST_ID, $published->travelRequestId->toString());
         self::assertSame(Mother::ADMIN_ID, $published->approvedBy->toString());
@@ -68,11 +79,15 @@ final class ApproveTravelRequestUseCaseTest extends TestCase
 
     public function test_RejectsStaleExpectedVersion(): void
     {
-        $this->travelRequests->add(Mother::requested());
+        $this->travelRequests->add(travelRequest: Mother::requested());
         $staleVersion = TravelRequest::FIRST_VERSION - 1;
 
         try {
-            $this->useCase->execute(new ApproveTravelRequestInput(Mother::TRAVEL_REQUEST_ID, Mother::ADMIN_ID, $staleVersion));
+            $this->useCase->execute(input: new ApproveTravelRequestInput(
+                travelRequestId: Mother::TRAVEL_REQUEST_ID,
+                approverId: Mother::ADMIN_ID,
+                expectedVersion: $staleVersion,
+            ));
             self::fail('A stale version must be rejected.');
         } catch (TravelRequestVersionMismatch) {
         }
@@ -84,10 +99,14 @@ final class ApproveTravelRequestUseCaseTest extends TestCase
     public function test_CannotApproveCancelledTravelRequest(): void
     {
         $alreadyDecided = Mother::cancelled();
-        $this->travelRequests->add($alreadyDecided);
+        $this->travelRequests->add(travelRequest: $alreadyDecided);
 
         try {
-            $this->useCase->execute(new ApproveTravelRequestInput(Mother::TRAVEL_REQUEST_ID, Mother::ADMIN_ID, $alreadyDecided->version));
+            $this->useCase->execute(input: new ApproveTravelRequestInput(
+                travelRequestId: Mother::TRAVEL_REQUEST_ID,
+                approverId: Mother::ADMIN_ID,
+                expectedVersion: $alreadyDecided->version,
+            ));
             self::fail('A decided travel request must not change status again.');
         } catch (InvalidStatusTransition) {
         }
@@ -98,9 +117,13 @@ final class ApproveTravelRequestUseCaseTest extends TestCase
 
     public function test_AdminCanApproveOwnTravelRequest(): void
     {
-        $this->travelRequests->add(Mother::requested(Mother::ADMIN_ID));
+        $this->travelRequests->add(travelRequest: Mother::requested(requesterId: Mother::ADMIN_ID));
 
-        $this->useCase->execute(new ApproveTravelRequestInput(Mother::TRAVEL_REQUEST_ID, Mother::ADMIN_ID, TravelRequest::FIRST_VERSION));
+        $this->useCase->execute(input: new ApproveTravelRequestInput(
+            travelRequestId: Mother::TRAVEL_REQUEST_ID,
+            approverId: Mother::ADMIN_ID,
+            expectedVersion: TravelRequest::FIRST_VERSION,
+        ));
 
         self::assertSame(TravelRequestStatus::Approved, $this->storedTravelRequest()->status);
     }
@@ -109,11 +132,15 @@ final class ApproveTravelRequestUseCaseTest extends TestCase
     {
         $this->expectException(TravelRequestNotFound::class);
 
-        $this->useCase->execute(new ApproveTravelRequestInput(Mother::TRAVEL_REQUEST_ID, Mother::ADMIN_ID, TravelRequest::FIRST_VERSION));
+        $this->useCase->execute(input: new ApproveTravelRequestInput(
+            travelRequestId: Mother::TRAVEL_REQUEST_ID,
+            approverId: Mother::ADMIN_ID,
+            expectedVersion: TravelRequest::FIRST_VERSION,
+        ));
     }
 
     private function storedTravelRequest(): TravelRequest
     {
-        return $this->travelRequests->get(TravelRequestId::fromString(Mother::TRAVEL_REQUEST_ID));
+        return $this->travelRequests->get(id: TravelRequestId::fromString(id: Mother::TRAVEL_REQUEST_ID));
     }
 }

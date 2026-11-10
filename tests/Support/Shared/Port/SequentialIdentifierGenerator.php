@@ -19,13 +19,18 @@ final class SequentialIdentifierGenerator implements IdentifierGenerator
      */
     public static function nth(int $sequence): string
     {
-        return self::UUID7_PREFIX . str_pad((string) $sequence, self::SEQUENCE_DIGITS, '0', STR_PAD_LEFT);
+        return self::UUID7_PREFIX . str_pad(
+            (string) $sequence,
+            self::SEQUENCE_DIGITS,
+            '0',
+            STR_PAD_LEFT,
+        );
     }
 
     public function uuid7(): string
     {
         $this->lastSequence++;
 
-        return self::nth($this->lastSequence);
+        return self::nth(sequence: $this->lastSequence);
     }
 }

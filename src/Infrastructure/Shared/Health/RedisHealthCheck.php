@@ -24,7 +24,8 @@ final readonly class RedisHealthCheck implements HealthCheck
     public function isHealthy(): bool
     {
         try {
-            $this->redis->connection()->command('ping');
+            $this->redis->connection()
+                ->command('ping');
 
             return true;
         } catch (Throwable $exception) {

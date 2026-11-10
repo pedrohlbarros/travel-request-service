@@ -15,7 +15,9 @@ final class OctaneServesHealthTest extends LaravelTestCase
 
     public function test_RunningOctaneServerAnswersReadiness(): void
     {
-        $response = Http::timeout(self::TIMEOUT_SECONDS)->acceptJson()->get(self::BASE_URL . '/health/ready');
+        $response = Http::timeout(self::TIMEOUT_SECONDS)
+            ->acceptJson()
+            ->get(self::BASE_URL . '/health/ready');
 
         self::assertSame(200, $response->status());
         self::assertSame('ok', $response->json('status'));
@@ -26,8 +28,11 @@ final class OctaneServesHealthTest extends LaravelTestCase
     {
         $clientRequestId = 'first-request-id';
 
-        $firstResponse = Http::timeout(self::TIMEOUT_SECONDS)->withHeaders(['X-Request-Id' => $clientRequestId])->get(self::BASE_URL . '/health/live');
-        $secondResponse = Http::timeout(self::TIMEOUT_SECONDS)->get(self::BASE_URL . '/health/live');
+        $firstResponse = Http::timeout(self::TIMEOUT_SECONDS)
+            ->withHeaders(['X-Request-Id' => $clientRequestId])
+            ->get(self::BASE_URL . '/health/live');
+        $secondResponse = Http::timeout(self::TIMEOUT_SECONDS)
+            ->get(self::BASE_URL . '/health/live');
 
         self::assertSame($clientRequestId, $firstResponse->header('X-Request-Id'));
         self::assertNotSame($clientRequestId, $secondResponse->header('X-Request-Id'));

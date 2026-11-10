@@ -18,7 +18,7 @@ final readonly class UserId
      */
     public static function fromString(string $id): self
     {
-        return new self(Uuid7::fromString($id));
+        return new self(uuid: Uuid7::fromString(candidate: $id));
     }
 
     public function toString(): string
@@ -28,6 +28,6 @@ final readonly class UserId
 
     public function equals(self $other): bool
     {
-        return $this->uuid->equals($other->uuid);
+        return $this->uuid->equals(other: $other->uuid);
     }
 }

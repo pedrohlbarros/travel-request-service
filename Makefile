@@ -65,7 +65,7 @@ urls: ## Show container IP, host port and URL of each service
 ##@ Setup
 
 .PHONY: setup shell composer
-setup: ## First run: .env, build, start, dependencies, app key, migrations, git hooks
+setup: ## First run: .env, build, start, dependencies, app key, migrations, JWT keys, git hooks
 	@[ -f .env ] || { cp .env.example .env; sed -i "s/^UID=.*/UID=$$(id -u)/; s/^GID=.*/GID=$$(id -g)/" .env; echo ".env created from .env.example"; }
 	@docker image inspect travel-request-service/app:dev >/dev/null 2>&1 || $(COMPOSE) build app
 	$(COMPOSE) up -d --wait mysql redis rabbitmq mailpit
@@ -73,6 +73,7 @@ setup: ## First run: .env, build, start, dependencies, app key, migrations, git 
 	@grep -q '^APP_KEY=base64' .env || $(COMPOSE) run --rm --no-deps app php artisan key:generate --ansi
 	$(COMPOSE) up -d --wait
 	$(PHP) artisan migrate --force
+	$(PHP) artisan identity:keys:generate
 	$(EXEC) vendor/bin/captainhook install --only-enabled --force --no-interaction
 
 shell: ## Open a shell in the app container
@@ -80,6 +81,24 @@ shell: ## Open a shell in the app container
 
 composer: ## Run composer in the app container (ARGS="require foo/bar")
 	$(EXEC) composer $(ARGS)
+
+##@ Identity
+
+.PHONY: keys keys-rotate user admin seed
+keys: ## Generate the JWT signing keys if missing (storage/keys, outside git)
+	$(PHP) artisan identity:keys:generate
+
+keys-rotate: ## Replace the JWT signing keys (every issued access token stops working)
+	$(PHP) artisan identity:keys:generate --force
+
+user: ## Create a regular user (NAME="..." EMAIL=... PASSWORD=...; asks for what is missing)
+	$(COMPOSE) exec app php artisan identity:create-user $(if $(NAME),--name="$(NAME)") $(if $(EMAIL),--email="$(EMAIL)") $(if $(PASSWORD),--password="$(PASSWORD)")
+
+admin: ## Create an admin (NAME="..." EMAIL=... PASSWORD=...; asks for what is missing)
+	$(COMPOSE) exec app php artisan identity:create-admin $(if $(NAME),--name="$(NAME)") $(if $(EMAIL),--email="$(EMAIL)") $(if $(PASSWORD),--password="$(PASSWORD)")
+
+seed: ## Seed the demo users: admin@, luffy@ and zoro@example.com (password: password123)
+	$(PHP) artisan db:seed --class='Infrastructure\Identity\Seeder\DemoUsersSeeder' --force
 
 ##@ Quality
 
@@ -129,10 +148,7 @@ infection: ## Mutation testing on Domain + Application (MSI >= 90%, covered MSI 
 
 ##@ Not implemented yet
 
-.PHONY: users load-smoke load-load load-stress load-concurrency obs web
-users: ## Create a user or an admin (not implemented yet)
-	@echo "make $@: not implemented yet"
-
+.PHONY: load-smoke load-load load-stress load-concurrency obs web
 load-smoke: ## Load test: smoke (1 VU) (not implemented yet)
 	@echo "make $@: not implemented yet"
 

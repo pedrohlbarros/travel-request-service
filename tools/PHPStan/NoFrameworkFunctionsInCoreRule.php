@@ -47,15 +47,28 @@ final readonly class NoFrameworkFunctionsInCoreRule implements Rule
         $definedIn = $function->getFileName();
         $resolved = $definedIn === null ? false : realpath($definedIn);
 
-        if ($definedIn === null || preg_match(self::FRAMEWORK_PATH_PATTERN, $resolved === false ? $definedIn : $resolved) !== 1) {
+        if ($definedIn === null) {
             return [];
         }
 
+        $isFrameworkFunction = preg_match(
+            self::FRAMEWORK_PATH_PATTERN,
+            $resolved === false ? $definedIn : $resolved,
+        ) === 1;
+
+        if (! $isFrameworkFunction) {
+            return [];
+        }
+
+        $message = sprintf(
+            'Domain and Application must not call the framework function %s(); inject a port instead.',
+            $function->getName(),
+        );
+
         return [
-            RuleErrorBuilder::message(sprintf(
-                'Domain and Application must not call the framework function %s(); inject a port instead.',
-                $function->getName(),
-            ))->identifier('architecture.frameworkFunction')->build(),
+            RuleErrorBuilder::message($message)
+                ->identifier('architecture.frameworkFunction')
+                ->build(),
         ];
     }
 }
