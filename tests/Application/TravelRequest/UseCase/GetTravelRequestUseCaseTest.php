@@ -1,0 +1,85 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Application\TravelRequest\UseCase;
+
+use Application\TravelRequest\Input\GetTravelRequestInput;
+use Application\TravelRequest\UseCase\GetTravelRequestUseCase;
+use Domain\TravelRequest\Entity\TravelRequest;
+use Domain\TravelRequest\Enum\TravelRequestStatus;
+use Domain\TravelRequest\Exception\TravelRequestNotFound;
+use PHPUnit\Framework\TestCase;
+use Tests\Support\TravelRequest\Fixture\TravelRequestMother as Mother;
+use Tests\Support\TravelRequest\Repository\InMemoryTravelRequestRepository;
+
+final class GetTravelRequestUseCaseTest extends TestCase
+{
+    private const bool AS_ADMIN = true;
+
+    private const bool AS_USER = false;
+
+    private InMemoryTravelRequestRepository $travelRequests;
+
+    private GetTravelRequestUseCase $useCase;
+
+    protected function setUp(): void
+    {
+        $this->travelRequests = new InMemoryTravelRequestRepository();
+        $this->useCase = new GetTravelRequestUseCase($this->travelRequests);
+    }
+
+    public function test_RequesterSeesOwnTravelRequest(): void
+    {
+        $this->travelRequests->add(Mother::requested());
+
+        $found = $this->useCase->execute(new GetTravelRequestInput(Mother::TRAVEL_REQUEST_ID, Mother::REQUESTER_ID, self::AS_USER));
+
+        self::assertSame(Mother::TRAVEL_REQUEST_ID, $found->id);
+        self::assertSame(Mother::REQUESTER_ID, $found->requesterId);
+        self::assertSame(Mother::DESTINATION, $found->destination);
+        self::assertEquals(Mother::moment(Mother::DEPARTURE_DATE), $found->departureDate);
+        self::assertEquals(Mother::moment(Mother::RETURN_DATE), $found->returnDate);
+        self::assertSame(TravelRequestStatus::Requested, $found->status);
+        self::assertSame(TravelRequest::FIRST_VERSION, $found->version);
+        self::assertEquals(Mother::moment(Mother::NOW), $found->createdAt);
+        self::assertEquals(Mother::moment(Mother::NOW), $found->updatedAt);
+        self::assertNull($found->decidedBy);
+    }
+
+    public function test_ViewShowsWhoDecided(): void
+    {
+        $this->travelRequests->add(Mother::approved());
+
+        $found = $this->useCase->execute(new GetTravelRequestInput(Mother::TRAVEL_REQUEST_ID, Mother::REQUESTER_ID, self::AS_USER));
+
+        self::assertSame(TravelRequestStatus::Approved, $found->status);
+        self::assertSame(Mother::ADMIN_ID, $found->decidedBy);
+        self::assertEquals(Mother::moment(Mother::LATER), $found->updatedAt);
+    }
+
+    public function test_AdminSeesAnyTravelRequest(): void
+    {
+        $this->travelRequests->add(Mother::requested());
+
+        $found = $this->useCase->execute(new GetTravelRequestInput(Mother::TRAVEL_REQUEST_ID, Mother::ADMIN_ID, self::AS_ADMIN));
+
+        self::assertSame(Mother::TRAVEL_REQUEST_ID, $found->id);
+    }
+
+    public function test_UserCannotSeeSomeoneElsesTravelRequest(): void
+    {
+        $this->travelRequests->add(Mother::requested());
+
+        $this->expectException(TravelRequestNotFound::class);
+
+        $this->useCase->execute(new GetTravelRequestInput(Mother::TRAVEL_REQUEST_ID, Mother::OTHER_USER_ID, self::AS_USER));
+    }
+
+    public function test_FailsForUnknownTravelRequest(): void
+    {
+        $this->expectException(TravelRequestNotFound::class);
+
+        $this->useCase->execute(new GetTravelRequestInput(Mother::TRAVEL_REQUEST_ID, Mother::ADMIN_ID, self::AS_ADMIN));
+    }
+}

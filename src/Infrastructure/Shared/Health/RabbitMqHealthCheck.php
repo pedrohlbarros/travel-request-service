@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Infrastructure\Shared\Health;
 
-use Application\Shared\Health\HealthCheck;
+use Application\Shared\Port\HealthCheck;
 use Infrastructure\Shared\Messaging\RabbitMqConnectionFactory;
 use Psr\Log\LoggerInterface;
 use Throwable;

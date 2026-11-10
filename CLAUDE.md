@@ -21,7 +21,7 @@ Microsserviço em Laravel para gestão de pedidos de viagem corporativa. É um t
 | Tema | Decisão | ADR |
 |---|---|---|
 | Runtime | PHP 8.5, Laravel (última estável), Octane + Swoole, MySQL, REST | [0001](docs/adr/0001-stack-e-runtime.md) |
-| Arquitetura | DDD + Hexagonal; contexts TravelRequest, Identity, Notification; `src/{Domain,Application,Infrastructure,Interfaces}/<Context>`; sem `app/`: providers por context/camada ([0025](docs/adr/0025-providers-por-contexto-sem-app.md)) | [0002](docs/adr/0002-arquitetura-ddd-hexagonal.md) |
+| Arquitetura | DDD + Hexagonal; contexts TravelRequest, Identity, Notification; `src/{Domain,Application,Infrastructure,Interfaces}/<Context>/<Tipo>` ([0029](docs/adr/0029-organizacao-por-tipo-e-use-cases.md)); sem `app/`: providers por context/camada ([0025](docs/adr/0025-providers-por-contexto-sem-app.md)) | [0002](docs/adr/0002-arquitetura-ddd-hexagonal.md) |
 | Regras | Status `requested`/`approved`/`cancelled`; só admin muda status; `requested → approved/cancelled`; aprovado não cancela; admin pode aprovar o próprio; admin vê todos; dono edita dados só em `requested` | [0003](docs/adr/0003-regras-de-negocio-do-pedido.md) |
 | Autorização | Enum `role` (`user`/`admin`) + Policies | [0004](docs/adr/0004-autorizacao-role-e-policies.md) |
 | Autenticação | `lcobucci/jwt`, RS256 + JWKS (`kid`), claims `iss/aud/nbf` sem role/PII, access 15 min, refresh 7 dias opaco rotativo (hash + família no MySQL), chaves geradas no setup fora do git; register público cria `user`, admin só por seeder/comando | [0005](docs/adr/0005-autenticacao-jwt.md) |
@@ -51,9 +51,10 @@ O worker é reaproveitado entre requests: nada de estado por request em singleto
 ## Padrões de código ([0014](docs/adr/0014-padrao-de-codigo.md), [0015](docs/adr/0015-camada-application-cqrs.md), [0017](docs/adr/0017-identificadores-uuidv7.md))
 
 - `declare(strict_types=1)` em todo arquivo; tipos nativos em tudo; sem `mixed` fora de adapters.
-- Classes `final` por padrão; VOs, DTOs, Commands, Queries e Events como `readonly class`.
+- Classes `final` por padrão; VOs, DTOs (Input/Output) e Events como `readonly class`.
 - `src/Domain` e `src/Application` **não importam** `Illuminate\*`, Facades nem helpers globais (`now()`, `auth()`, `config()`...). Dependência externa entra por port + injeção.
-- Casos de uso: Command/Query `readonly` + um Handler cada, chamados direto pelo controller (sem bus).
+- Casos de uso: `<Ação>UseCase` com `execute()`, Input e Output em DTO (`readonly`); um único parâmetro entra direto. Chamados direto pelo controller (sem bus) ([0029](docs/adr/0029-organizacao-por-tipo-e-use-cases.md)).
+- Pastas por tipo em todas as camadas: Domain `Entity/ValueObject/Enum/Event/Exception/Repository`; Application `UseCase/Input/Output/Port`; Interfaces `Controller/Middleware/...`.
 - IDs UUIDv7 gerados no domínio, `BINARY(16)` no MySQL.
 - Docblock só quando o tipo não diz: generics/shapes do PHPStan, `@throws` de exceção de domínio, porquê de regra não óbvia.
 - Estilo: Pint com preset PER. Análise: PHPStan + Larastan nível max, sem baseline; complexidade cognitiva função ≤ 9, classe ≤ 40 ([0027](docs/adr/0027-complexidade-cognitiva.md)). Fronteiras: Deptrac.

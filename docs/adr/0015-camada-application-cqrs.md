@@ -1,6 +1,6 @@
 # 0015 — Casos de uso: Command/Query + Handler
 
-- **Status:** Aceito
+- **Status:** Aceito (nomenclatura Command/Query + Handler substituída por [0029](0029-organizacao-por-tipo-e-use-cases.md))
 - **Data:** 2026-11-09
 
 ## Decisão

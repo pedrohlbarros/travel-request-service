@@ -106,7 +106,7 @@ test: ## Run every suite
 	$(PHP) vendor/bin/phpunit
 
 test-unit: ## Unit suite (Domain + Application)
-	$(PHP) vendor/bin/phpunit --testsuite=unit
+	$(PHP) vendor/bin/phpunit --testsuite=unit --testdox
 
 test-integration: ## Integration suite (real MySQL, Redis, RabbitMQ)
 	$(PHP) vendor/bin/phpunit --testsuite=integration
@@ -125,7 +125,7 @@ coverage: ## Every suite with line coverage; fails below 85%
 	$(PHP) tools/check-coverage.php build/coverage/clover.xml 85
 
 infection: ## Mutation testing on Domain + Application (MSI >= 90%, covered MSI >= 95%)
-	$(EXEC) vendor/bin/infection --ignore-msi-with-no-mutations --no-progress --show-mutations
+	$(EXEC) vendor/bin/infection --no-progress --show-mutations
 
 ##@ Not implemented yet
 

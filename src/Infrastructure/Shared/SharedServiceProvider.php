@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Infrastructure\Shared;
 
-use Application\Shared\Health\CheckReadinessHandler;
+use Application\Shared\UseCase\CheckReadinessUseCase;
 use Illuminate\Contracts\Config\Repository as Config;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
@@ -37,7 +37,7 @@ final class SharedServiceProvider extends ServiceProvider
             RabbitMqHealthCheck::class,
         ], self::HEALTH_CHECKS_TAG);
 
-        $this->app->when(CheckReadinessHandler::class)
+        $this->app->when(CheckReadinessUseCase::class)
             ->needs('$checks')
             ->giveTagged(self::HEALTH_CHECKS_TAG);
     }

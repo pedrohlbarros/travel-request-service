@@ -1,7 +1,7 @@
 # Fase 01 — Domínio TravelRequest
 
-- **Status:** Proposto
-- **ADRs:** 0002, 0003, 0006, 0012, 0014, 0015, 0017, 0018
+- **Status:** Concluída (2026-11-09)
+- **ADRs:** 0002, 0003, 0006, 0012, 0014, 0015, 0017, 0018, 0028, 0029
 
 ## Objetivo
 Modelar o pedido de viagem em PHP puro, com as regras de negócio completas e testadas, sem framework nem banco.
@@ -14,7 +14,7 @@ Modelar o pedido de viagem em PHP puro, com as regras de negócio completas e te
 - Exceções de domínio específicas (base para os `/problems/...`).
 - Ports: repositório, clock, gerador de ID, publicação de eventos.
 - Fakes in-memory dessas ports em `tests/Support`.
-- Commands/Queries + Handlers da Application testados com fakes.
+- Casos de uso (`<Ação>UseCase` + Input/Output) da Application testados com fakes.
 
 ## Fora de escopo
 HTTP, Eloquent, autenticação, mensageria real.
@@ -29,4 +29,4 @@ HTTP, Eloquent, autenticação, mensageria real.
 3. Revisar o agregado e os VOs.
 
 ## Aprovação
-- [ ] Aprovado pelo usuário em: ____
+- [x] Aprovado pelo usuário em: 2026-11-09
