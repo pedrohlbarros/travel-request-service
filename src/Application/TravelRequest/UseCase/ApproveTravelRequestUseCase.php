@@ -32,15 +32,21 @@ final readonly class ApproveTravelRequestUseCase
      */
     public function execute(ApproveTravelRequestInput $input): TravelRequestOutput
     {
-        $travelRequest = $this->travelRequests->get(TravelRequestId::fromString($input->travelRequestId));
+        $travelRequest = $this->travelRequests->get(id: TravelRequestId::fromString(id: $input->travelRequestId));
         $loadedVersion = $travelRequest->version;
-        $travelRequest->assertVersionIs($input->expectedVersion);
+        $travelRequest->assertVersionIs(expectedVersion: $input->expectedVersion);
 
-        $travelRequest->approve(UserId::fromString($input->approverId), $this->clock->now());
+        $travelRequest->approve(
+            approverId: UserId::fromString(id: $input->approverId),
+            approvedAt: $this->clock->now(),
+        );
 
-        $this->travelRequests->update($travelRequest, $loadedVersion);
+        $this->travelRequests->update(
+            travelRequest: $travelRequest,
+            loadedVersion: $loadedVersion,
+        );
         $this->events->publish(...$travelRequest->releaseEvents());
 
-        return TravelRequestOutput::fromEntity($travelRequest);
+        return TravelRequestOutput::fromEntity(travelRequest: $travelRequest);
     }
 }

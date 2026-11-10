@@ -10,11 +10,23 @@ final class InvalidTravelPeriod extends BusinessRuleViolation
 {
     public static function returnBeforeDeparture(string $departureDate, string $returnDate): self
     {
-        return new self(\sprintf('Return date %s is before departure date %s.', $returnDate, $departureDate));
+        $message = \sprintf(
+            'Return date %s is before departure date %s.',
+            $returnDate,
+            $departureDate,
+        );
+
+        return new self($message);
     }
 
     public static function departureInThePast(string $departureDate, string $today): self
     {
-        return new self(\sprintf('Departure date %s is before today (%s).', $departureDate, $today));
+        $message = \sprintf(
+            'Departure date %s is before today (%s).',
+            $departureDate,
+            $today,
+        );
+
+        return new self($message);
     }
 }

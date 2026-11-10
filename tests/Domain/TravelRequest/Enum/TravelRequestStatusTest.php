@@ -16,6 +16,9 @@ final class TravelRequestStatusTest extends TestCase
             TravelRequestStatus::cases(),
         );
 
-        self::assertSame(['requested', 'approved', 'cancelled'], $statusValues);
+        self::assertSame(
+            ['requested', 'approved', 'cancelled'],
+            $statusValues,
+        );
     }
 }

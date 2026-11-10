@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 use Illuminate\Support\Str;
 
+$appNameSlug = Str::slug((string) env(
+    'APP_NAME',
+    'laravel',
+));
+
 return [
 
     /*
@@ -20,7 +25,10 @@ return [
     |
     */
 
-    'driver' => env('SESSION_DRIVER', 'array'),
+    'driver' => env(
+        'SESSION_DRIVER',
+        'array',
+    ),
 
     /*
     |--------------------------------------------------------------------------
@@ -34,9 +42,15 @@ return [
     |
     */
 
-    'lifetime' => (int) env('SESSION_LIFETIME', 120),
+    'lifetime' => (int) env(
+        'SESSION_LIFETIME',
+        120,
+    ),
 
-    'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
+    'expire_on_close' => env(
+        'SESSION_EXPIRE_ON_CLOSE',
+        false,
+    ),
 
     /*
     |--------------------------------------------------------------------------
@@ -49,7 +63,10 @@ return [
     |
     */
 
-    'encrypt' => env('SESSION_ENCRYPT', false),
+    'encrypt' => env(
+        'SESSION_ENCRYPT',
+        false,
+    ),
 
     /*
     |--------------------------------------------------------------------------
@@ -88,7 +105,10 @@ return [
     |
     */
 
-    'table' => env('SESSION_TABLE', 'sessions'),
+    'table' => env(
+        'SESSION_TABLE',
+        'sessions',
+    ),
 
     /*
     |--------------------------------------------------------------------------
@@ -131,7 +151,7 @@ return [
 
     'cookie' => env(
         'SESSION_COOKIE',
-        Str::slug((string) env('APP_NAME', 'laravel')) . '-session',
+        $appNameSlug . '-session',
     ),
 
     /*
@@ -145,7 +165,10 @@ return [
     |
     */
 
-    'path' => env('SESSION_PATH', '/'),
+    'path' => env(
+        'SESSION_PATH',
+        '/',
+    ),
 
     /*
     |--------------------------------------------------------------------------
@@ -184,7 +207,10 @@ return [
     |
     */
 
-    'http_only' => env('SESSION_HTTP_ONLY', true),
+    'http_only' => env(
+        'SESSION_HTTP_ONLY',
+        true,
+    ),
 
     /*
     |--------------------------------------------------------------------------
@@ -201,7 +227,10 @@ return [
     |
     */
 
-    'same_site' => env('SESSION_SAME_SITE', 'lax'),
+    'same_site' => env(
+        'SESSION_SAME_SITE',
+        'lax',
+    ),
 
     /*
     |--------------------------------------------------------------------------
@@ -214,7 +243,10 @@ return [
     |
     */
 
-    'partitioned' => env('SESSION_PARTITIONED_COOKIE', false),
+    'partitioned' => env(
+        'SESSION_PARTITIONED_COOKIE',
+        false,
+    ),
 
     /*
     |--------------------------------------------------------------------------

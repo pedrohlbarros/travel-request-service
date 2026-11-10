@@ -26,17 +26,20 @@ final readonly class TravelPeriod
      */
     public static function between(DateTimeImmutable $departureDate, DateTimeImmutable $returnDate): self
     {
-        $departureDay = self::calendarDayOf($departureDate);
-        $returnDay = self::calendarDayOf($returnDate);
+        $departureDay = self::calendarDayOf(moment: $departureDate);
+        $returnDay = self::calendarDayOf(moment: $returnDate);
 
         if ($returnDay < $departureDay) {
             throw InvalidTravelPeriod::returnBeforeDeparture(
-                $departureDay->format(self::CALENDAR_DATE),
-                $returnDay->format(self::CALENDAR_DATE),
+                departureDate: $departureDay->format(self::CALENDAR_DATE),
+                returnDate: $returnDay->format(self::CALENDAR_DATE),
             );
         }
 
-        return new self($departureDay, $returnDay);
+        return new self(
+            departureDate: $departureDay,
+            returnDate: $returnDay,
+        );
     }
 
     /**
@@ -44,12 +47,13 @@ final readonly class TravelPeriod
      */
     public function assertDepartsOnOrAfterDayOf(DateTimeImmutable $moment): void
     {
-        $today = self::calendarDayOf($moment->setTimezone(new DateTimeZone(self::CALENDAR_TIMEZONE)));
+        $momentInCalendarTimezone = $moment->setTimezone(new DateTimeZone(self::CALENDAR_TIMEZONE));
+        $today = self::calendarDayOf(moment: $momentInCalendarTimezone);
 
         if ($this->departureDate < $today) {
             throw InvalidTravelPeriod::departureInThePast(
-                $this->departureDate->format(self::CALENDAR_DATE),
-                $today->format(self::CALENDAR_DATE),
+                departureDate: $this->departureDate->format(self::CALENDAR_DATE),
+                today: $today->format(self::CALENDAR_DATE),
             );
         }
     }

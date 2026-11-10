@@ -26,16 +26,16 @@ final readonly class TravelRequestOutput
     public static function fromEntity(TravelRequest $travelRequest): self
     {
         return new self(
-            $travelRequest->id->toString(),
-            $travelRequest->requesterId->toString(),
-            $travelRequest->destination->name,
-            $travelRequest->period->departureDate,
-            $travelRequest->period->returnDate,
-            $travelRequest->status,
-            $travelRequest->version,
-            $travelRequest->createdAt,
-            $travelRequest->updatedAt,
-            $travelRequest->decidedBy?->toString(),
+            id: $travelRequest->id->toString(),
+            requesterId: $travelRequest->requesterId->toString(),
+            destination: $travelRequest->destination->name,
+            departureDate: $travelRequest->period->departureDate,
+            returnDate: $travelRequest->period->returnDate,
+            status: $travelRequest->status,
+            version: $travelRequest->version,
+            createdAt: $travelRequest->createdAt,
+            updatedAt: $travelRequest->updatedAt,
+            decidedBy: $travelRequest->decidedBy?->toString(),
         );
     }
 }

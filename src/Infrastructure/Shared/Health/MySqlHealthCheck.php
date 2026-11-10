@@ -24,11 +24,15 @@ final readonly class MySqlHealthCheck implements HealthCheck
     public function isHealthy(): bool
     {
         try {
-            $this->connections->connection()->select('SELECT 1');
+            $this->connections->connection()
+                ->select('SELECT 1');
 
             return true;
         } catch (Throwable $exception) {
-            $this->logger->warning('Readiness check failed', ['check' => $this->name(), 'exception' => $exception]);
+            $this->logger->warning(
+                'Readiness check failed',
+                ['check' => $this->name(), 'exception' => $exception],
+            );
 
             return false;
         }

@@ -34,34 +34,43 @@ final class TravelRequestMother
 
     public static function moment(string $moment): DateTimeImmutable
     {
-        return new DateTimeImmutable($moment, new DateTimeZone('UTC'));
+        return new DateTimeImmutable(
+            $moment,
+            new DateTimeZone('UTC'),
+        );
     }
 
     public static function period(string $departureDate = self::DEPARTURE_DATE, string $returnDate = self::RETURN_DATE): TravelPeriod
     {
-        return TravelPeriod::between(self::moment($departureDate), self::moment($returnDate));
+        return TravelPeriod::between(
+            departureDate: self::moment(moment: $departureDate),
+            returnDate: self::moment(moment: $returnDate),
+        );
     }
 
     public static function userId(string $id): UserId
     {
-        return UserId::fromString($id);
+        return UserId::fromString(id: $id);
     }
 
     public static function requested(string $requesterId = self::REQUESTER_ID): TravelRequest
     {
         return TravelRequest::request(
-            TravelRequestId::fromString(self::TRAVEL_REQUEST_ID),
-            UserId::fromString($requesterId),
-            Destination::fromString(self::DESTINATION),
-            self::period(),
-            self::moment(self::NOW),
+            id: TravelRequestId::fromString(id: self::TRAVEL_REQUEST_ID),
+            requesterId: UserId::fromString(id: $requesterId),
+            destination: Destination::fromString(name: self::DESTINATION),
+            period: self::period(),
+            requestedAt: self::moment(moment: self::NOW),
         );
     }
 
     public static function approved(): TravelRequest
     {
         $travelRequest = self::requested();
-        $travelRequest->approve(self::userId(self::ADMIN_ID), self::moment(self::LATER));
+        $travelRequest->approve(
+            approverId: self::userId(id: self::ADMIN_ID),
+            approvedAt: self::moment(moment: self::LATER),
+        );
         $travelRequest->releaseEvents();
 
         return $travelRequest;
@@ -70,7 +79,10 @@ final class TravelRequestMother
     public static function cancelled(): TravelRequest
     {
         $travelRequest = self::requested();
-        $travelRequest->cancel(self::userId(self::ADMIN_ID), self::moment(self::LATER));
+        $travelRequest->cancel(
+            cancellerId: self::userId(id: self::ADMIN_ID),
+            cancelledAt: self::moment(moment: self::LATER),
+        );
         $travelRequest->releaseEvents();
 
         return $travelRequest;

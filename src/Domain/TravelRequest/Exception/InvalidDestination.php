@@ -10,11 +10,13 @@ final class InvalidDestination extends BusinessRuleViolation
 {
     public static function lengthOutOfRange(string $name, int $shortestName, int $longestName): self
     {
-        return new self(\sprintf(
+        $message = \sprintf(
             'Destination "%s" must have between %d and %d characters.',
             $name,
             $shortestName,
             $longestName,
-        ));
+        );
+
+        return new self($message);
     }
 }

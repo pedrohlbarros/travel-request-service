@@ -11,11 +11,13 @@ final class TravelRequestVersionMismatch extends BusinessRuleViolation
 {
     public static function expected(TravelRequestId $id, int $expectedVersion, int $currentVersion): self
     {
-        return new self(\sprintf(
+        $message = \sprintf(
             'Travel request %s is at version %d, not %d.',
             $id->toString(),
             $currentVersion,
             $expectedVersion,
-        ));
+        );
+
+        return new self($message);
     }
 }

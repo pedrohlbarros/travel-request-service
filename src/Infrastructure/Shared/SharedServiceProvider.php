@@ -19,23 +19,44 @@ final class SharedServiceProvider extends ServiceProvider
 
     public function register(): void
     {
-        $this->app->singleton(RabbitMqConnectionFactory::class, static function (Application $app): RabbitMqConnectionFactory {
-            $config = $app->make(Config::class);
+        $this->app->singleton(
+            RabbitMqConnectionFactory::class,
+            static function (Application $app): RabbitMqConnectionFactory {
+                $config = $app->make(Config::class);
 
-            return new RabbitMqConnectionFactory(
-                host: self::stringFrom($config, 'rabbitmq.host'),
-                port: self::intFrom($config, 'rabbitmq.port'),
-                user: self::stringFrom($config, 'rabbitmq.user'),
-                password: self::stringFrom($config, 'rabbitmq.password'),
-                vhost: self::stringFrom($config, 'rabbitmq.vhost'),
-            );
-        });
+                return new RabbitMqConnectionFactory(
+                    host: self::stringFrom(
+                        config: $config,
+                        key: 'rabbitmq.host',
+                    ),
+                    port: self::intFrom(
+                        config: $config,
+                        key: 'rabbitmq.port',
+                    ),
+                    user: self::stringFrom(
+                        config: $config,
+                        key: 'rabbitmq.user',
+                    ),
+                    password: self::stringFrom(
+                        config: $config,
+                        key: 'rabbitmq.password',
+                    ),
+                    vhost: self::stringFrom(
+                        config: $config,
+                        key: 'rabbitmq.vhost',
+                    ),
+                );
+            },
+        );
 
-        $this->app->tag([
-            MySqlHealthCheck::class,
-            RedisHealthCheck::class,
-            RabbitMqHealthCheck::class,
-        ], self::HEALTH_CHECKS_TAG);
+        $this->app->tag(
+            [
+                MySqlHealthCheck::class,
+                RedisHealthCheck::class,
+                RabbitMqHealthCheck::class,
+            ],
+            self::HEALTH_CHECKS_TAG,
+        );
 
         $this->app->when(CheckReadinessUseCase::class)
             ->needs('$checks')

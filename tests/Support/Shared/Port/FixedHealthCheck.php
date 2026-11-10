@@ -15,12 +15,18 @@ final readonly class FixedHealthCheck implements HealthCheck
 
     public static function healthy(string $name): self
     {
-        return new self($name, true);
+        return new self(
+            name: $name,
+            isHealthy: true,
+        );
     }
 
     public static function unhealthy(string $name): self
     {
-        return new self($name, false);
+        return new self(
+            name: $name,
+            isHealthy: false,
+        );
     }
 
     public function name(): string

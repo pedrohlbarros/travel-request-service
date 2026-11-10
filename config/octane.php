@@ -40,7 +40,10 @@ return [
     |
     */
 
-    'server' => env('OCTANE_SERVER', 'swoole'),
+    'server' => env(
+        'OCTANE_SERVER',
+        'swoole',
+    ),
 
     /*
     |--------------------------------------------------------------------------
@@ -53,7 +56,10 @@ return [
     |
     */
 
-    'https' => env('OCTANE_HTTPS', false),
+    'https' => env(
+        'OCTANE_HTTPS',
+        false,
+    ),
 
     /*
     |--------------------------------------------------------------------------
@@ -234,7 +240,10 @@ return [
     |
     */
 
-    'state_file' => env('OCTANE_STATE_FILE', storage_path('logs/octane-server-state.json')),
+    'state_file' => env(
+        'OCTANE_STATE_FILE',
+        storage_path('logs/octane-server-state.json'),
+    ),
 
     /*
     |--------------------------------------------------------------------------
@@ -249,8 +258,14 @@ return [
     */
 
     'roadrunner' => [
-        'command' => env('OCTANE_ROADRUNNER_COMMAND', 'vendor/bin/roadrunner-worker'),
-        'http_middleware' => env('OCTANE_ROADRUNNER_HTTP_MIDDLEWARE', 'static'),
+        'command' => env(
+            'OCTANE_ROADRUNNER_COMMAND',
+            'vendor/bin/roadrunner-worker',
+        ),
+        'http_middleware' => env(
+            'OCTANE_ROADRUNNER_HTTP_MIDDLEWARE',
+            'static',
+        ),
     ],
 
 ];

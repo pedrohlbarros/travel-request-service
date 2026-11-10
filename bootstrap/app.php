@@ -14,7 +14,8 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__ . '/../routes/console.php',
         apiPrefix: 'api/v1',
         then: static function (): void {
-            Route::middleware('api')->group(__DIR__ . '/../routes/health.php');
+            Route::middleware('api')
+                ->group(__DIR__ . '/../routes/health.php');
         },
     )
     ->withMiddleware(static function (Middleware $middleware): void {
@@ -22,5 +23,6 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(static function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(static fn(): bool => true);
-    })->create()
+    })
+    ->create()
     ->useAppPath(dirname(__DIR__) . '/src/Infrastructure');

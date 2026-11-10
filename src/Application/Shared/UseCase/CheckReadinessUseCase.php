@@ -24,6 +24,6 @@ final readonly class CheckReadinessUseCase
             $isHealthyByCheckName[$check->name()] = $check->isHealthy();
         }
 
-        return new ReadinessOutput($isHealthyByCheckName);
+        return new ReadinessOutput(checks: $isHealthyByCheckName);
     }
 }

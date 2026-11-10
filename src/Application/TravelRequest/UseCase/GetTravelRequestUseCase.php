@@ -26,13 +26,13 @@ final readonly class GetTravelRequestUseCase
      */
     public function execute(GetTravelRequestInput $input): TravelRequestOutput
     {
-        $travelRequest = $this->travelRequests->get(TravelRequestId::fromString($input->travelRequestId));
-        $isOwnRequest = $travelRequest->requesterId->equals(UserId::fromString($input->viewerId));
+        $travelRequest = $this->travelRequests->get(id: TravelRequestId::fromString(id: $input->travelRequestId));
+        $isOwnRequest = $travelRequest->requesterId->equals(other: UserId::fromString(id: $input->viewerId));
 
         if (! $isOwnRequest && ! $input->isViewerAdmin) {
-            throw TravelRequestNotFound::withId($travelRequest->id);
+            throw TravelRequestNotFound::withId(id: $travelRequest->id);
         }
 
-        return TravelRequestOutput::fromEntity($travelRequest);
+        return TravelRequestOutput::fromEntity(travelRequest: $travelRequest);
     }
 }

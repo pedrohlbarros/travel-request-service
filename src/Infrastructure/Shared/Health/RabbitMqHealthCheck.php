@@ -30,7 +30,10 @@ final readonly class RabbitMqHealthCheck implements HealthCheck
 
             return $isConnected;
         } catch (Throwable $exception) {
-            $this->logger->warning('Readiness check failed', ['check' => $this->name(), 'exception' => $exception]);
+            $this->logger->warning(
+                'Readiness check failed',
+                ['check' => $this->name(), 'exception' => $exception],
+            );
 
             return false;
         }
