@@ -34,7 +34,7 @@ Deixar o repositório pronto para o avaliador: um README padrão e enxuto, docum
 - LikeC4 no perfil `docs` (`make docs`): modelo único em `docs/architecture/`, visões numeradas em sequência (contexto, containers, observabilidade, componentes, fluxos com walkthrough e os dados reais de cada passo, deployment), listadas em `docs/arquitetura.md`.
 
 ### 6. Revisão do enunciado
-- Cada item do `docs/desafio.md` conferido contra rotas, regras e testes (feito na fase, sem documento próprio).
+- Cada item do enunciado conferido contra rotas, regras e testes (feito na fase, sem documento próprio).
 
 ## Validação manual (usuário)
 1. Clonar o repositório numa pasta limpa e seguir só o README: `make setup`, `make seed` e `make demo`.
