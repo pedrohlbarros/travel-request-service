@@ -58,8 +58,6 @@ final class GenerateJwtKeysCommand extends Command
      */
     private function newKeyPair(): array
     {
-        // OpenSSL reports failures as warnings, which the framework raises as ErrorException,
-        // so the asserts only narrow types.
         $privateKey = openssl_pkey_new(['private_key_bits' => self::RSA_KEY_BITS, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
         \assert($privateKey !== false);
         $privateKeyPem = null;
@@ -76,7 +74,6 @@ final class GenerateJwtKeysCommand extends Command
     {
         $directory = \dirname($path);
 
-        // The framework's error handler turns a failing filesystem call into an ErrorException.
         if (! is_dir($directory)) {
             mkdir($directory, self::DIRECTORY_PERMISSIONS, true);
         }

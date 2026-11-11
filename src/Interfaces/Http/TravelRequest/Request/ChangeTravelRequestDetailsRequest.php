@@ -22,7 +22,6 @@ final class ChangeTravelRequestDetailsRequest extends FormRequest
     {
         $returnDateRules = [self::AT_LEAST_ONE_OF . 'destination,departure_date', 'date_format:' . CalendarDate::FORMAT];
 
-        // Against the stored departure the domain decides, since the request does not carry it.
         if ($this->filled('departure_date')) {
             $returnDateRules[] = 'after_or_equal:departure_date';
         }

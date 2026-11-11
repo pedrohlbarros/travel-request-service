@@ -37,8 +37,6 @@ final readonly class RefreshAccessTokenUseCase
 
         $isRotationWon = $this->refreshTokens->markRotated(refreshToken: $storedToken, rotatedAt: $now);
 
-        // Losing the rotation means the token was rotated before, or a moment ago by a concurrent request:
-        // either way it was used twice.
         if (! $isRotationWon) {
             $this->refreshTokens->revokeFamily(familyId: $storedToken->familyId, revokedAt: $now);
 

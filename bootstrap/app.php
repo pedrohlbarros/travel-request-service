@@ -23,7 +23,6 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(static function (Middleware $middleware): void {
         $middleware->prepend(AssignRequestContext::class);
-        // An API has no login page: guests get a 401 problem instead of a redirect to a "login" route.
         $middleware->redirectGuestsTo(static fn(): ?string => null);
     })
     ->withExceptions(static function (Exceptions $exceptions): void {

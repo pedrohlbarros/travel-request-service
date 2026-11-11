@@ -44,7 +44,6 @@ final class TravelRequestHttpServiceProvider extends ServiceProvider
             type: ProblemDetailsRenderer::VALIDATION_FAILED_TYPE,
             title: 'The request is invalid.',
         );
-        // Someone else's request is reported exactly like a missing one, so its id is never confirmed.
         $notFound = new ProblemType(
             status: 404,
             type: '/problems/not-found',
