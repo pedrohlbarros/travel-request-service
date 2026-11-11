@@ -1,0 +1,90 @@
+views {
+  view index {
+    title '1. Contexto'
+    description 'Quem usa o Travel Request Service e com o que ele conversa'
+
+    include requester, admin, operator, trs, email, observability
+    include requester -> trs with {
+      title 'pede viagens e acompanha as notificações'
+    }
+    include admin -> trs with {
+      title 'aprova ou cancela pedidos'
+    }
+    include trs -> email with {
+      title 'envia o e-mail da decisão'
+    }
+    include trs -> observability with {
+      title 'traces, métricas e logs'
+      technology 'OTLP'
+    }
+    include operator -> observability, email -> requester
+    exclude observability -> trs
+  }
+
+  view containers of trs {
+    title '2. Containers'
+    description 'Processos e armazenamentos do perfil padrão do Docker Compose'
+
+    include *
+    include requester, admin, email
+    exclude observability, k6
+    exclude trs.relay -> trs.replica
+    autoLayout TopBottom
+  }
+
+  view observabilityContainers of observability {
+    title '3. Observabilidade'
+    description 'Como traces, métricas e logs saem dos processos e chegam ao Grafana'
+
+    include *
+    include trs.api, trs.relay, trs.consumer, trs.rabbitmq, k6, operator
+    autoLayout LeftRight
+  }
+
+  view apiComponents of trs.api {
+    title '4. Componentes da API'
+    description 'Contexts Identity, TravelRequest e Notification na API, em camadas: Interfaces → Application → Domain, com ports implementadas na Infrastructure'
+
+    include *
+    include trs.api.identity.*, trs.api.travelRequest.*, trs.api.notificationHttp.*, trs.api.shared.*
+    include trs.mysql, trs.replica, trs.redis, trs.page
+    exclude trs.api.shared.telemetry
+    exclude trs.mysql -> trs.replica
+    style trs.api.identity, trs.api.travelRequest, trs.api.notificationHttp, trs.api.shared {
+      opacity 10%
+    }
+  }
+
+  view identityComponents of trs.api.identity {
+    title '4.1 Identity'
+    description 'Login, refresh rotativo, autenticação de cada request e papel em cache'
+
+    include *
+    include trs.api.shared.middleware, trs.mysql, trs.redis
+  }
+
+  view travelRequestComponents of trs.api.travelRequest {
+    title '4.2 TravelRequest'
+    description 'Do controller ao agregado, com cache, outbox e versionamento otimista'
+
+    include *
+    include trs.api.shared.middleware, trs.api.shared.problems, trs.mysql, trs.redis
+  }
+
+  view relayComponents of trs.relay {
+    title '4.3 Relay do outbox'
+    description 'Publica o outbox no RabbitMQ em lotes, com confirms, e exporta os gauges de saúde'
+
+    include *
+    include trs.mysql, trs.replica, trs.rabbitmq
+    autoLayout LeftRight
+  }
+
+  view consumerComponents of trs.consumer {
+    title '4.4 Consumidor de decisões'
+    description 'Notification: inbox, banco e e-mail numa transação; broadcast depois do commit'
+
+    include *
+    include trs.rabbitmq, trs.mysql, trs.reverb, email
+  }
+}

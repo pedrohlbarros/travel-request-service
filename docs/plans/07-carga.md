@@ -17,7 +17,7 @@ Medir e garantir performance e a garantia de concorrência com k6.
 - Réplica de leitura do MySQL (ADR 0040): `mysql-replica` por GTID, conexão read/write com sticky, repositórios e miss do cache no primário, readiness e gauge de defasagem com alerta; `make db-replica-sync` e `make db-replica-status`.
 - Repositório de pedidos reaproveita a linha do `get()` no `update()`, sem ler de novo.
 - Consumidores do Notification configuráveis (`NOTIFICATION_CONSUMERS`, padrão 2).
-- Resultados em `docs/load/resultados.md`; resumos brutos em `build/load/`.
+- Resultados em `docs/testes-de-carga.md`; resumos brutos em `build/load/`.
 - **Ressalva musl (ADR 0022):** rodar load e stress na imagem Alpine e numa variante Debian temporária com as mesmas extensões; comparar RPS, p95/p99, uso de memória e teto do stress. Registrar os números para a entrega.
 
 ## Otimização (ADRs 0041 e 0042)
@@ -26,7 +26,7 @@ Depois da primeira rodada, a fase ganhou metas com base em referências de merca
 2. **Instrumentos:** CPU pinada por `.env`, cAdvisor e painéis de metas no Grafana, `notification.end_to_end.duration`, `mysql.replica.running` com alerta, `make obs-measure`, `load-capacity` e `load-pipeline`.
 3. **Linha de base:** load, capacity e stress com o código anterior às otimizações.
 4. **Otimizações, medidas uma a uma:** cache do papel, auditoria de idas por request (travada em teste), timeouts, varredura de workers, SDK enxuto e réplica com e sem.
-5. **Rodada final e % de melhoria** em `docs/load/resultados.md`.
+5. **Rodada final e % de melhoria** em `docs/testes-de-carga.md`.
 
 ## Decidido na fase
 - Limiar Alpine × Debian: troca a base se a Debian for mais de 15% melhor em RPS no teto do stress ou em p95 do load (ADR 0039).
@@ -41,7 +41,7 @@ Depois da primeira rodada, a fase ganhou metas com base em referências de merca
 1. `make load-seed` e rodar cada cenário pelo Makefile (`load-smoke`, `load-concurrency`, `load-load`, `load-capacity`, `load-stress`), e depois `make load-pipeline`.
 2. Com `make obs-measure`, ver no Grafana o dashboard "k6 Prometheus" e, no "Travel Request Service", a linha "Containers" (CPU e memória por serviço) durante o load.
 3. Com `make obs`, rodar um load e ver a linha "Metas" (leitura, escrita, erros, notificação ponta a ponta), o painel "Replicação" e, no Jaeger, um trace de aprovação só com spans HTTP, SQL, publish e consume.
-4. Conferir em `docs/load/resultados.md` a linha de base, a atribuição de cada otimização, a rodada final com as % de melhoria e o custo do SDK.
+4. Conferir em `docs/testes-de-carga.md` a linha de base, a atribuição de cada otimização, a rodada final com as % de melhoria e o custo do SDK.
 
 ## Aprovação
 - [x] Aprovado pelo usuário em: 2026-11-11

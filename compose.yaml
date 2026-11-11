@@ -326,6 +326,17 @@ services:
       - ./tests/Load:/scripts:ro
       - ./build/load:/results
 
+  likec4:
+    image: likec4/likec4:1.60.0
+    profiles: [docs]
+    init: true
+    command: ["start"]
+    ports:
+      - "${FORWARD_LIKEC4_PORT:-5173}:5173"
+      - "${FORWARD_LIKEC4_HMR_PORT:-24678}:24678"
+    volumes:
+      - ./docs/architecture:/data
+
 volumes:
   mysql-data:
   mysql-replica-data:

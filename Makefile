@@ -20,10 +20,11 @@ FORWARD_GRAFANA_PORT      ?= 3000
 FORWARD_JAEGER_UI_PORT    ?= 16686
 FORWARD_PROMETHEUS_PORT   ?= 9090
 FORWARD_LOKI_PORT         ?= 3100
+FORWARD_LIKEC4_PORT       ?= 5173
 
 OBS_SERVICES := otel-collector jaeger prometheus loki grafana cadvisor
 
-SERVICES := app outbox-relay notification-consumer reverb mysql mysql-replica redis rabbitmq mailpit
+SERVICES := app outbox-relay notification-consumer reverb mysql mysql-replica redis rabbitmq mailpit grafana jaeger prometheus loki likec4
 
 ##@ Help
 
@@ -70,6 +71,11 @@ urls: ## Show container IP, host port and URL of each service
 			outbox-relay) host="-"; url="no port (make relay-logs)" ;; \
 			notification-consumer) host="-"; url="no port (make consumer-logs)" ;; \
 			reverb)   host="localhost:$(FORWARD_REVERB_PORT)"; url="http://localhost:$(FORWARD_APP_PORT)/docs/notifications (live page, APP_ENV=local)" ;; \
+			grafana)  host="localhost:$(FORWARD_GRAFANA_PORT)"; url="http://localhost:$(FORWARD_GRAFANA_PORT) (obs profile, anonymous viewer)" ;; \
+			jaeger)   host="localhost:$(FORWARD_JAEGER_UI_PORT)"; url="http://localhost:$(FORWARD_JAEGER_UI_PORT) (obs profile)" ;; \
+			prometheus) host="localhost:$(FORWARD_PROMETHEUS_PORT)"; url="http://localhost:$(FORWARD_PROMETHEUS_PORT) (obs profile)" ;; \
+			loki)     host="localhost:$(FORWARD_LOKI_PORT)"; url="http://localhost:$(FORWARD_LOKI_PORT)/ready (obs profile)" ;; \
+			likec4)   host="localhost:$(FORWARD_LIKEC4_PORT)"; url="http://localhost:$(FORWARD_LIKEC4_PORT) (docs profile, C4 diagrams)" ;; \
 		esac; \
 		printf "%-22s %-16s %-18s %s\n" $$service "$${ip:-not running}" "$$host" "$$url"; \
 	done
@@ -121,10 +127,14 @@ admin: ## Create an admin (NAME="..." EMAIL=... PASSWORD=...; asks for what is m
 seed: ## Seed the demo users: admin@, luffy@ and zoro@example.com (password: password123)
 	$(PHP) artisan db:seed --class='Infrastructure\Identity\Seeder\DemoUsersSeeder' --force
 
+.PHONY: demo
+demo: ## Walk the whole flow: Luffy asks for a trip, the admin approves it, the notification and the e-mail arrive
+	@$(COMPOSE) exec -T -e DEMO_APP_URL=http://localhost:$(FORWARD_APP_PORT) -e DEMO_MAILPIT_URL=http://localhost:$(FORWARD_MAILPIT_UI_PORT) app php tools/demo.php
+
 ##@ API
 
-.PHONY: docs
-docs: ## Export the OpenAPI document to storage/openapi.json and print the docs URL (open only with APP_ENV=local)
+.PHONY: openapi
+openapi: ## Export the OpenAPI document to docs/api/openapi.json and print the docs URL (open only with APP_ENV=local)
 	$(PHP) artisan scramble:export
 	@echo "API docs: http://localhost:$(FORWARD_APP_PORT)/docs/api  (OpenAPI JSON: /docs/api.json)"
 
@@ -278,8 +288,18 @@ load-debian-up: ## Build and start the Debian (glibc) variant of the app, to com
 load-debian-down: ## Stop the Debian variant
 	$(COMPOSE) --profile debian rm -sf app-debian
 
-##@ Not implemented yet
+##@ Documentation
+
+.PHONY: docs docs-down
+docs: ## Start the interactive C4 diagrams (LikeC4) with live reload; play the dynamic views step by step
+	$(COMPOSE) --profile docs up -d likec4
+	@echo "Diagrams: http://localhost:$(FORWARD_LIKEC4_PORT)  (dynamic views 5.x have a step-by-step walkthrough)"
+
+docs-down: ## Stop the diagrams server
+	$(COMPOSE) --profile docs rm -sf likec4
+
+##@ Notifications page
 
 .PHONY: web
-web: ## Start the optional frontend profile (not implemented yet)
-	@echo "make $@: not implemented yet"
+web: ## Print the URL of the live notifications page (APP_ENV=local)
+	@echo "Notifications page: http://localhost:$(FORWARD_APP_PORT)/docs/notifications  (sign in as Luffy, then run make demo)"

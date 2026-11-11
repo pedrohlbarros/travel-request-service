@@ -12,11 +12,11 @@ Uma decisão por arquivo: contexto, decisão, consequências. Numeração sequen
 | [0006](0006-concorrencia-versionamento-otimista.md) | Concorrência (ETag/If-Match) e códigos 428/412/409/404/403 | Aceito |
 | [0007](0007-mensageria-rabbitmq-e-outbox.md) | Mensageria com RabbitMQ + Transactional Outbox | Aceito |
 | [0008](0008-papeis-do-redis.md) | Papéis do Redis | Aceito |
-| [0009](0009-infra-docker-e-perfis.md) | Docker Compose e perfis | Aceito |
+| [0009](0009-infra-docker-e-perfis.md) | Docker Compose e perfis | Aceito (perfil `web` substituído por 0044; perfil `docs` em 0043) |
 | [0010](0010-observabilidade.md) | Observabilidade: OTel, Jaeger, Prometheus, Grafana | Aceito |
 | [0011](0011-qualidade-e-testes.md) | PHPUnit, Infection e testes de carga com k6 | Aceito |
 | [0012](0012-destino-como-string.md) | Destino como string no pedido | Aceito |
-| [0013](0013-documentacao.md) | Organização da documentação e README enxuto | Aceito |
+| [0013](0013-documentacao.md) | Organização da documentação e README enxuto | Aceito (refinado por 0043) |
 | [0014](0014-padrao-de-codigo.md) | Padrão de código: Pint (PER), PHPStan max, Deptrac, strict/final/readonly, docblock mínimo | Aceito |
 | [0015](0015-camada-application-cqrs.md) | Casos de uso: Command/Query + Handler, sem bus | Aceito (nomenclatura substituída por 0029) |
 | [0016](0016-convencoes-da-api.md) | API: /api/v1, ações de status, cursor, snake_case, RFC 9457, Scramble | Aceito |
@@ -46,3 +46,5 @@ Uma decisão por arquivo: contexto, decisão, consequências. Numeração sequen
 | [0040](0040-replica-de-leitura.md) | Réplica de leitura do MySQL: GTID assíncrona, read/write com sticky, comando e miss do cache no primário, readiness e gauge de defasagem | Aceito |
 | [0041](0041-metas-de-desempenho-e-carga-de-projeto.md) | Metas de desempenho com fontes, modelo de uso e carga de projeto de 100 req/s; load por taxa constante, capacity com 50 VUs, teto do stress pela meta de leitura (substitui os thresholds do 0018 e do 0039) | Aceito |
 | [0042](0042-otimizacao-de-desempenho.md) | Otimização: CPU pinada por `.env`, cAdvisor e painéis de metas, latência ponta a ponta, cache do papel, timeouts, 24 workers, SDK enxuto (protobuf, lote, só HTTP e query), réplica sem binlog próprio | Aceito |
+| [0043](0043-documentacao-da-entrega.md) | Documentação da entrega: README padrão e enxuto, documentos dedicados (arquitetura, comandos, testes, carga), C4 no LikeC4 com fluxos passo a passo, `make demo`, coleção `.http` e OpenAPI exportado | Aceito |
+| [0044](0044-pagina-de-notificacoes.md) | Página de notificações no lugar do frontend opcional: login com contas de demo, lista e chegada ao vivo pelo Reverb (substitui o perfil `web` do 0009 e a fase 09) | Aceito |

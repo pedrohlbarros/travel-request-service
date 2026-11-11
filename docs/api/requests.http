@@ -1,0 +1,170 @@
+### Travel Request Service — coleção de requests
+# HTTP Client do PhpStorm/IntelliJ: rode de cima para baixo. Os scripts guardam tokens, ids e ETag.
+# Precisa de `make up` e `make seed` (contas admin@, luffy@ e zoro@example.com, senha password123).
+# Porta diferente de 8000? Troque @host abaixo.
+
+@host = http://localhost:8000
+@api = {{host}}/api/v1
+
+### 1. Login do solicitante (Luffy)
+POST {{api}}/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{"email": "luffy@example.com", "password": "password123"}
+
+> {%
+    client.global.set("luffy", response.body.access_token);
+    client.global.set("luffy_refresh", response.body.refresh_token);
+%}
+
+### 2. Login do admin
+POST {{api}}/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{"email": "admin@example.com", "password": "password123"}
+
+> {% client.global.set("admin", response.body.access_token); %}
+
+### 3. Login do Zoro (outro solicitante)
+POST {{api}}/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{"email": "zoro@example.com", "password": "password123"}
+
+> {% client.global.set("zoro", response.body.access_token); %}
+
+### 4. Quem sou eu
+GET {{api}}/auth/me
+Authorization: Bearer {{luffy}}
+Accept: application/json
+
+### 5. Refresh rotativo: o refresh antigo deixa de valer
+POST {{api}}/auth/refresh
+Content-Type: application/json
+Accept: application/json
+
+{"refresh_token": "{{luffy_refresh}}"}
+
+> {%
+    client.global.set("luffy", response.body.access_token);
+    client.global.set("luffy_refresh", response.body.refresh_token);
+%}
+
+### 6. Criar um pedido (201, ETag "1"); o solicitante vem do token
+POST {{api}}/travel-requests
+Authorization: Bearer {{luffy}}
+Content-Type: application/json
+Accept: application/json
+
+{"destination": "Wano", "departure_date": "2027-01-10", "return_date": "2027-01-15"}
+
+> {%
+    client.global.set("travel_request", response.body.data.id);
+    client.global.set("etag", response.headers.valueOf("ETag"));
+%}
+
+### 7. Consultar o pedido
+GET {{api}}/travel-requests/{{travel_request}}
+Authorization: Bearer {{luffy}}
+Accept: application/json
+
+### 8. Listar com filtros: status, destino, período de criação e de viagem, cursor
+GET {{api}}/travel-requests?status=requested&destination=Wano&travel_from=2027-01-01&travel_to=2027-01-31&per_page=10
+Authorization: Bearer {{luffy}}
+Accept: application/json
+
+### 9. Editar o destino (só o dono, só em requested) com If-Match
+PATCH {{api}}/travel-requests/{{travel_request}}
+Authorization: Bearer {{luffy}}
+If-Match: {{etag}}
+Content-Type: application/json
+Accept: application/json
+
+{"destination": "Dressrosa"}
+
+> {% client.global.set("etag", response.headers.valueOf("ETag")); %}
+
+### 10. Outro usuário não enxerga o pedido: 404
+GET {{api}}/travel-requests/{{travel_request}}
+Authorization: Bearer {{zoro}}
+Accept: application/json
+
+### 11. Solicitante não decide: 403
+POST {{api}}/travel-requests/{{travel_request}}/approve
+Authorization: Bearer {{luffy}}
+If-Match: {{etag}}
+Accept: application/json
+
+### 12. Decisão sem If-Match: 428
+POST {{api}}/travel-requests/{{travel_request}}/approve
+Authorization: Bearer {{admin}}
+Accept: application/json
+
+### 13. Admin aprova (200, ETag "3"); a notificação chega ao Luffy por banco, e-mail e WebSocket
+POST {{api}}/travel-requests/{{travel_request}}/approve
+Authorization: Bearer {{admin}}
+If-Match: {{etag}}
+Accept: application/json
+
+### 14. Repetir com o ETag antigo: 412 /problems/version-mismatch
+POST {{api}}/travel-requests/{{travel_request}}/cancel
+Authorization: Bearer {{admin}}
+If-Match: {{etag}}
+Accept: application/json
+
+### 15. Cancelar um pedido aprovado: 409 /problems/invalid-status-transition
+POST {{api}}/travel-requests/{{travel_request}}/cancel
+Authorization: Bearer {{admin}}
+If-Match: "3"
+Accept: application/json
+
+### 16. Validação: 422 /problems/validation-failed
+POST {{api}}/travel-requests
+Authorization: Bearer {{luffy}}
+Content-Type: application/json
+Accept: application/json
+
+{"destination": "W", "departure_date": "2020-01-01", "return_date": "2019-12-31"}
+
+### 17. Admin vê todos os pedidos
+GET {{api}}/travel-requests?per_page=5
+Authorization: Bearer {{admin}}
+Accept: application/json
+
+### 18. Notificações do Luffy (a mais nova primeiro); unread=true filtra as não lidas
+GET {{api}}/notifications?unread=true&per_page=5
+Authorization: Bearer {{luffy}}
+Accept: application/json
+
+> {%
+    if (response.body.data.length > 0) {
+        client.global.set("notification", response.body.data[0].id);
+    }
+%}
+
+### 19. Marcar como lida (idempotente)
+POST {{api}}/notifications/{{notification}}/read
+Authorization: Bearer {{luffy}}
+Accept: application/json
+
+### 20. Logout (204): revoga o access token (lista no Redis) e a família do refresh token
+POST {{api}}/auth/logout
+Authorization: Bearer {{luffy}}
+Content-Type: application/json
+Accept: application/json
+
+{"refresh_token": "{{luffy_refresh}}"}
+
+### 21. O token revogado não vale mais: 401
+GET {{api}}/auth/me
+Authorization: Bearer {{luffy}}
+Accept: application/json
+
+### 22. Chaves públicas do JWT (JWKS)
+GET {{host}}/.well-known/jwks.json
+
+### 23. Saúde: liveness e readiness (MySQL, réplica, Redis, RabbitMQ)
+GET {{host}}/health/ready
