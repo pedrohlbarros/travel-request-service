@@ -1,6 +1,6 @@
 # Fase 05 — Notification
 
-- **Status:** Aprovado para início
+- **Status:** Concluído (2026-11-10)
 - **ADRs:** 0007, 0009, 0016, 0017, 0020, 0036, 0037
 
 ## Objetivo
@@ -29,4 +29,4 @@ O solicitante é notificado por mail, database e broadcast sempre que um pedido 
 5. Publicar uma mensagem inválida no exchange (management) → `make dlq` mostra o motivo; `make dlq-replay` devolve à fila.
 
 ## Aprovação
-- [ ] Aprovado pelo usuário em: ____
+- [x] Aprovado pelo usuário em: 2026-11-10
