@@ -39,3 +39,4 @@ Uma decisão por arquivo: contexto, decisão, consequências. Numeração sequen
 | [0033](0033-detalhes-da-api-de-pedidos.md) | API de pedidos: PATCH parcial, ordem 404→412→409, ETag strong, Policies por papel, cache em decorators, cursor por `id` | Aceito (Resource sem nome e sem FK substituídos por 0034) |
 | [0034](0034-relacionamento-pedido-usuario.md) | Relacionamento pedido–usuário: FKs com `restrictOnDelete`, `RequesterModel` só leitura, `requester`/`decided_by` com nome na resposta | Aceito |
 | [0035](0035-cobertura-e-msi-em-100.md) | Cobertura de linhas, MSI e Covered MSI em 100%; trait de eventos no Domain\Shared; `\assert` para estreitar tipo (substitui as metas do 0018) | Aceito |
+| [0036](0036-detalhes-da-mensageria.md) | Mensageria: port `Transaction`, cache após commit, publisher do outbox com mapper por context, `outbox_messages`, envelope CloudEvents, `traceparent` recebido, relay 200 ms → 2 s em lotes de 100, `messaging:tap` | Aceito |
