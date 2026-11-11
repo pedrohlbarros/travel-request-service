@@ -9,6 +9,7 @@ use Domain\TravelRequest\Repository\TravelRequestRepository;
 use Illuminate\Contracts\Cache\Repository as Cache;
 use Illuminate\Contracts\Config\Repository as Config;
 use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Database\ConnectionInterface;
 use Illuminate\Support\ServiceProvider;
 use Infrastructure\Shared\Config\TypedConfig;
 use Infrastructure\Shared\Observability\Telemetry;
@@ -68,11 +69,16 @@ final class TravelRequestServiceProvider extends ServiceProvider
 
         $this->app->bind(
             TravelRequestQueries::class,
-            static fn(Application $app): TravelRequestQueries => new CachedTravelRequestQueries(
-                queries: new DatabaseTravelRequestQueries(),
-                cache: $app->make(Cache::class),
-                settings: $app->make(TravelRequestCacheSettings::class),
-            ),
+            static function (Application $app): TravelRequestQueries {
+                $primary = $app->make(ConnectionInterface::class);
+
+                return new CachedTravelRequestQueries(
+                    queries: new DatabaseTravelRequestQueries(),
+                    cache: $app->make(Cache::class),
+                    settings: $app->make(TravelRequestCacheSettings::class),
+                    primary: $primary,
+                );
+            },
         );
     }
 }

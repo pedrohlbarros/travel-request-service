@@ -11,9 +11,18 @@ use Domain\TravelRequest\Repository\TravelRequestRepository;
 use Domain\TravelRequest\ValueObject\TravelRequestId;
 use Infrastructure\Shared\Persistence\BinaryUuid;
 
-final readonly class EloquentTravelRequestRepository implements TravelRequestRepository
+/**
+ * Keeps the rows it handed out, so an update after a get writes the changed columns without reading the row
+ * again. A new instance is made for every use case, so nothing outlives a request.
+ *
+ * Reads go to the primary: a write decides on what it reads, and the replica may not have the latest row yet.
+ */
+final class EloquentTravelRequestRepository implements TravelRequestRepository
 {
     private const int ROWS_CHANGED_BY_A_WON_RACE = 1;
+
+    /** @var array<string, TravelRequestModel> */
+    private array $loadedRows = [];
 
     public function get(TravelRequestId $id): TravelRequest
     {
@@ -22,6 +31,8 @@ final readonly class EloquentTravelRequestRepository implements TravelRequestRep
         if ($travelRequestRow === null) {
             throw TravelRequestNotFound::withId(id: $id);
         }
+
+        $this->loadedRows[$id->toString()] = $travelRequestRow;
 
         return TravelRequestRows::toEntity(travelRequestRow: $travelRequestRow);
     }
@@ -37,7 +48,8 @@ final readonly class EloquentTravelRequestRepository implements TravelRequestRep
      */
     public function update(TravelRequest $travelRequest, int $loadedVersion): void
     {
-        $storedRow = $this->findRow(id: $travelRequest->id);
+        $storedRow = $this->loadedRows[$travelRequest->id->toString()] ?? $this->findRow(id: $travelRequest->id);
+        unset($this->loadedRows[$travelRequest->id->toString()]);
 
         if ($storedRow === null) {
             throw TravelRequestNotFound::withId(id: $travelRequest->id);
@@ -52,7 +64,7 @@ final readonly class EloquentTravelRequestRepository implements TravelRequestRep
         }
 
         $storedRow->fill(TravelRequestRows::columnsOf(travelRequest: $travelRequest));
-        $updatedRows = TravelRequestModel::query()
+        $updatedRows = TravelRequestModel::onPrimary()
             ->whereKey($storedRow->getRawOriginal('id'))
             ->where('version', $loadedVersion)
             ->update($storedRow->getDirty());
@@ -66,7 +78,7 @@ final readonly class EloquentTravelRequestRepository implements TravelRequestRep
     {
         $idBytes = BinaryUuid::toBytes(uuid: $id->toString());
 
-        return TravelRequestModel::query()
+        return TravelRequestModel::onPrimary()
             ->whereKey($idBytes)
             ->first();
     }
@@ -77,7 +89,7 @@ final readonly class EloquentTravelRequestRepository implements TravelRequestRep
     private function failLostRace(TravelRequest $travelRequest, int $loadedVersion): never
     {
         $idBytes = BinaryUuid::toBytes(uuid: $travelRequest->id->toString());
-        $currentVersion = TravelRequestModel::query()
+        $currentVersion = TravelRequestModel::onPrimary()
             ->whereKey($idBytes)
             ->value('version');
 

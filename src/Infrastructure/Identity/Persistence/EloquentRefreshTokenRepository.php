@@ -32,7 +32,7 @@ final readonly class EloquentRefreshTokenRepository implements RefreshTokenRepos
 
     public function findByHash(RefreshTokenHash $tokenHash): ?RefreshToken
     {
-        $tokenRow = RefreshTokenModel::query()
+        $tokenRow = RefreshTokenModel::onPrimary()
             ->where('token_hash', $tokenHash->value)
             ->first();
 
@@ -42,7 +42,7 @@ final readonly class EloquentRefreshTokenRepository implements RefreshTokenRepos
     public function markRotated(RefreshToken $refreshToken, DateTimeImmutable $rotatedAt): bool
     {
         $tokenIdBytes = BinaryUuid::toBytes(uuid: $refreshToken->id->toString());
-        $rotatedRows = RefreshTokenModel::query()
+        $rotatedRows = RefreshTokenModel::onPrimary()
             ->whereKey($tokenIdBytes)
             ->where('rotated_at', null)
             ->where('revoked_at', null)
@@ -55,7 +55,7 @@ final readonly class EloquentRefreshTokenRepository implements RefreshTokenRepos
     {
         $familyIdBytes = BinaryUuid::toBytes(uuid: $familyId->toString());
 
-        RefreshTokenModel::query()
+        RefreshTokenModel::onPrimary()
             ->where('family_id', $familyIdBytes)
             ->where('revoked_at', null)
             ->update(['revoked_at' => $revokedAt]);

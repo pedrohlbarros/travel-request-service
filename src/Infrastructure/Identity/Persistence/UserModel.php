@@ -7,6 +7,7 @@ namespace Infrastructure\Identity\Persistence;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Infrastructure\Shared\Persistence\BinaryUuidCast;
+use Infrastructure\Shared\Persistence\ReadsFromPrimary;
 
 /**
  * @property string $id
@@ -19,6 +20,8 @@ use Infrastructure\Shared\Persistence\BinaryUuidCast;
  */
 final class UserModel extends Model
 {
+    use ReadsFromPrimary;
+
     public $incrementing = false;
 
     protected $table = 'users';

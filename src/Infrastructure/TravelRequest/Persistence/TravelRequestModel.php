@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Infrastructure\Shared\Persistence\BinaryUuid;
 use Infrastructure\Shared\Persistence\BinaryUuidCast;
+use Infrastructure\Shared\Persistence\ReadsFromPrimary;
 
 /**
  * The user references keep their raw 16 bytes (see RequesterModel), so only the own id is cast.
@@ -31,6 +32,8 @@ use Infrastructure\Shared\Persistence\BinaryUuidCast;
  */
 final class TravelRequestModel extends Model
 {
+    use ReadsFromPrimary;
+
     /** Eager loads of both users, limited to the columns a response shows. */
     public const array WITH_USERS = ['requester:id,name', 'decider:id,name'];
 

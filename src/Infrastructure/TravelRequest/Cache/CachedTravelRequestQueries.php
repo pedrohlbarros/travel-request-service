@@ -11,10 +11,14 @@ use Application\TravelRequest\Port\TravelRequestQueries;
 use Domain\TravelRequest\Exception\TravelRequestNotFound;
 use Domain\TravelRequest\ValueObject\TravelRequestId;
 use Illuminate\Contracts\Cache\Repository as Cache;
+use Illuminate\Database\Connection;
 
 /**
  * Misses are not cached, so a request is readable as soon as it is created. User names are cached with the
  * request: Identity offers no way to rename a user, so nothing has to drop them.
+ *
+ * A miss reads from the primary, never the replica: the cache is dropped right after a commit, and a lagging
+ * replica would put the old state back in it until the entry expires.
  */
 final readonly class CachedTravelRequestQueries implements TravelRequestQueries
 {
@@ -24,6 +28,7 @@ final readonly class CachedTravelRequestQueries implements TravelRequestQueries
         private TravelRequestQueries $queries,
         private Cache $cache,
         private TravelRequestCacheSettings $settings,
+        private Connection $primary,
     ) {}
 
     public function find(TravelRequestId $id): ?TravelRequestOutput
@@ -35,7 +40,7 @@ final readonly class CachedTravelRequestQueries implements TravelRequestQueries
             return $cachedTravelRequest;
         }
 
-        $travelRequest = $this->queries->find(id: $id);
+        $travelRequest = $this->primary->usingWritePdo(fn(): ?TravelRequestOutput => $this->queries->find(id: $id));
 
         if ($travelRequest !== null) {
             $this->cache->put($detailKey, $travelRequest, $this->settings->detailSeconds);
@@ -67,7 +72,7 @@ final readonly class CachedTravelRequestQueries implements TravelRequestQueries
             return $cachedPage;
         }
 
-        $page = $this->queries->list(criteria: $criteria);
+        $page = $this->primary->usingWritePdo(fn(): TravelRequestPage => $this->queries->list(criteria: $criteria));
         $this->cache->put($listKey, $page, $this->settings->listSeconds);
 
         return $page;

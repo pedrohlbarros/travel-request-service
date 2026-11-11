@@ -62,10 +62,12 @@ final class TravelRequestCacheTest extends LaravelTestCase
             cache: $cache,
             transactions: $this->app->make('db.transactions'),
         );
+        $primary = $this->app->make(ConnectionInterface::class);
         $this->queries = new CachedTravelRequestQueries(
             queries: new DatabaseTravelRequestQueries(),
             cache: $cache,
             settings: new TravelRequestCacheSettings(detailSeconds: self::TTL_SECONDS, listSeconds: self::TTL_SECONDS),
+            primary: $primary,
         );
     }
 

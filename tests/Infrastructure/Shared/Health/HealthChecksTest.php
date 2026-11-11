@@ -28,7 +28,9 @@ final class HealthChecksTest extends LaravelTestCase
     public function test_MySqlCheckIsUnhealthyWhenDatabaseIsUnreachable(): void
     {
         $this->app->make('config')
-            ->set('database.connections.mysql.host', self::UNREACHABLE_HOST);
+            ->set('database.connections.mysql.read.host', [self::UNREACHABLE_HOST]);
+        $this->app->make('config')
+            ->set('database.connections.mysql.write.host', [self::UNREACHABLE_HOST]);
         $this->app->make('db')
             ->purge('mysql');
         $check = new MySqlHealthCheck(
