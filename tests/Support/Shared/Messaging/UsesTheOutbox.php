@@ -10,6 +10,7 @@ use Illuminate\Database\ConnectionInterface;
 use Illuminate\Log\Context\Repository as Context;
 use Infrastructure\Shared\Messaging\Outbox\OutboxDomainEventPublisher;
 use Infrastructure\Shared\Messaging\RabbitMqConnectionFactory;
+use Infrastructure\Shared\Observability\Telemetry;
 use Infrastructure\Shared\Persistence\BinaryUuid;
 use Tests\Support\Shared\Port\SequentialIdentifierGenerator;
 
@@ -37,6 +38,7 @@ trait UsesTheOutbox
             mappers: [new SampleEventMessages()],
             identifiers: $identifiers,
             context: $this->app->make(Context::class),
+            telemetry: $this->app->make(Telemetry::class),
             source: self::SAMPLE_SOURCE,
         );
 

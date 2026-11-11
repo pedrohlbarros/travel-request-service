@@ -10,6 +10,7 @@ use DateTimeZone;
 use Domain\Shared\Event\DomainEvent;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Log\Context\Repository as Context;
+use Infrastructure\Shared\Observability\Telemetry;
 use Infrastructure\Shared\Persistence\BinaryUuid;
 use LogicException;
 
@@ -21,6 +22,10 @@ final readonly class OutboxDomainEventPublisher implements DomainEventPublisher
     public const string TABLE = 'outbox_messages';
 
     public const string TRACEPARENT = 'traceparent';
+
+    public const string REQUEST_ID = 'x-request-id';
+
+    private const string REQUEST_ID_CONTEXT = 'request_id';
 
     public const string DATETIME_FORMAT = 'Y-m-d H:i:s';
 
@@ -36,6 +41,7 @@ final readonly class OutboxDomainEventPublisher implements DomainEventPublisher
         private iterable $mappers,
         private IdentifierGenerator $identifiers,
         private Context $context,
+        private Telemetry $telemetry,
         private string $source,
     ) {}
 
@@ -79,16 +85,24 @@ final readonly class OutboxDomainEventPublisher implements DomainEventPublisher
     }
 
     /**
+     * The current span when tracing is on; otherwise the traceparent the request came with, if any.
+     *
      * @return array<string, string>
      */
     private function headers(): array
     {
-        $traceparent = $this->context->getHidden(self::TRACEPARENT);
+        $headers = $this->telemetry->propagationHeaders();
+        $receivedTraceparent = $this->context->getHidden(self::TRACEPARENT);
+        $requestId = $this->context->get(self::REQUEST_ID_CONTEXT);
 
-        if (! \is_string($traceparent)) {
-            return [];
+        if (! isset($headers[self::TRACEPARENT]) && \is_string($receivedTraceparent)) {
+            $headers[self::TRACEPARENT] = $receivedTraceparent;
         }
 
-        return [self::TRACEPARENT => $traceparent];
+        if (\is_string($requestId)) {
+            $headers[self::REQUEST_ID] = $requestId;
+        }
+
+        return $headers;
     }
 }

@@ -13,9 +13,11 @@ use Tests\Support\LaravelTestCase;
 use Tests\Support\Shared\Messaging\RabbitMqTestQueue;
 use Tests\Support\Shared\Messaging\SampleEventMessages;
 use Tests\Support\Shared\Messaging\UsesTheOutbox;
+use Tests\Support\Shared\Observability\CapturesTelemetry;
 
 final class RelayOutboxCommandTest extends LaravelTestCase
 {
+    use CapturesTelemetry;
     use RefreshDatabase;
     use UsesTheOutbox;
 
@@ -35,6 +37,7 @@ final class RelayOutboxCommandTest extends LaravelTestCase
     protected function tearDown(): void
     {
         $this->queue->close();
+        $this->releaseTelemetry();
         parent::tearDown();
     }
 
@@ -62,6 +65,18 @@ final class RelayOutboxCommandTest extends LaravelTestCase
 
         self::assertSame(Command::FAILURE, $exitCode);
         self::assertSame(1, $this->pendingCount());
+    }
+
+    public function test_ReportsHowManyMessagesArePending(): void
+    {
+        $this->storeSampleEvents(subjects: ['first', 'second']);
+        $this->useBrokerOnPort(port: self::UNUSED_PORT);
+        $this->captureTelemetry();
+
+        $this->command(command: 'outbox:relay', parameters: ['--once' => true])
+            ->run();
+
+        self::assertSame(2, $this->capturedValue(metricName: 'outbox.pending'));
     }
 
     public function test_KeepsPollingUntilAStopSignalAndFinishesTheBatchFirst(): void

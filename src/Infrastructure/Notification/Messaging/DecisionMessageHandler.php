@@ -4,9 +4,14 @@ declare(strict_types=1);
 
 namespace Infrastructure\Notification\Messaging;
 
+use Application\Notification\Output\NotificationDelivery;
 use Application\Notification\UseCase\NotifyRequesterOfDecisionUseCase;
 use Domain\Notification\Exception\InvalidDecision;
 use Domain\Shared\Exception\InvalidIdentifier;
+use Illuminate\Log\Context\Repository as Context;
+use Infrastructure\Shared\Observability\Telemetry;
+use OpenTelemetry\API\Trace\SpanInterface;
+use OpenTelemetry\API\Trace\SpanKind;
 use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Message\AMQPMessage;
 use PhpAmqpLib\Wire\AMQPTable;
@@ -29,35 +34,66 @@ final readonly class DecisionMessageHandler
 
     public const string RETRIES_EXHAUSTED = 'retries_exhausted';
 
+    public const string DELIVERED = 'delivered';
+
+    public const string DUPLICATE = 'duplicate';
+
+    public const string RETRIED = 'retried';
+
+    public const string DEAD_LETTERED = 'dead_lettered';
+
+    public const string REQUEST_ID_HEADER = 'x-request-id';
+
+    private const string REQUEST_ID_CONTEXT = 'request_id';
+
     private const string DEFAULT_EXCHANGE = '';
+
+    private const int NANOSECONDS_PER_SECOND = 1_000_000_000;
+
+    private const array DURATION_BUCKETS_SECONDS = [0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0];
 
     public function __construct(
         private NotifyRequesterOfDecisionUseCase $notifyRequester,
         private DecisionMessageParser $parser,
         private DecisionConsumerSettings $settings,
         private LoggerInterface $logger,
+        private Telemetry $telemetry,
+        private Context $context,
     ) {}
 
+    /**
+     * The consume span continues the trace the message carries, so the delivery shows up under the request
+     * that made the decision.
+     */
     public function handle(AMQPMessage $message): void
     {
         $channel = $message->getChannel();
         \assert($channel instanceof AMQPChannel);
+        $carrier = self::stringHeadersOf(message: $message);
+        $startedAt = hrtime(true);
+        $requestId = $carrier[self::REQUEST_ID_HEADER] ?? null;
 
-        try {
-            $input = $this->parser->parse(body: $message->getBody());
-            $this->notifyRequester->execute(input: $input);
-        } catch (UnreadableDecisionMessage|InvalidDecision|InvalidIdentifier $unreadable) {
-            $this->deadLetter(
-                channel: $channel,
-                message: $message,
-                reason: self::UNREADABLE,
-                failure: $unreadable,
-            );
-        } catch (Throwable $failure) {
-            $this->retryOrDeadLetter(channel: $channel, message: $message, failure: $failure);
+        if ($requestId !== null) {
+            $this->context->add(self::REQUEST_ID_CONTEXT, $requestId);
         }
 
+        $outcome = $this->telemetry->inSpan(
+            name: 'process ' . $this->settings->queue,
+            work: fn(SpanInterface $span): string => $this->settle(channel: $channel, message: $message, span: $span),
+            kind: SpanKind::KIND_CONSUMER,
+            attributes: [
+                'messaging.system' => 'rabbitmq',
+                'messaging.operation.type' => 'process',
+                'messaging.destination.name' => $this->settings->queue,
+                'messaging.rabbitmq.destination.routing_key' => $message->getRoutingKey() ?? '',
+            ],
+            parent: $this->telemetry->contextFrom(carrier: $carrier),
+        );
+
         $message->ack();
+        $durationSeconds = (hrtime(true) - $startedAt) / self::NANOSECONDS_PER_SECOND;
+        $this->record(outcome: $outcome, durationSeconds: $durationSeconds);
+        $this->context->forget(self::REQUEST_ID_CONTEXT);
     }
 
     public static function retryCountOf(AMQPMessage $message): int
@@ -83,7 +119,69 @@ final readonly class DecisionMessageHandler
         return $headers instanceof AMQPTable ? $headers->getNativeData() : [];
     }
 
-    private function retryOrDeadLetter(AMQPChannel $channel, AMQPMessage $message, Throwable $failure): void
+    /**
+     * @return self::DELIVERED|self::DUPLICATE|self::RETRIED|self::DEAD_LETTERED
+     */
+    private function settle(AMQPChannel $channel, AMQPMessage $message, SpanInterface $span): string
+    {
+        try {
+            $input = $this->parser->parse(body: $message->getBody());
+            $delivery = $this->notifyRequester->execute(input: $input);
+        } catch (UnreadableDecisionMessage|InvalidDecision|InvalidIdentifier $unreadable) {
+            $span->recordException($unreadable);
+            $this->deadLetter(
+                channel: $channel,
+                message: $message,
+                reason: self::UNREADABLE,
+                failure: $unreadable,
+            );
+
+            return self::DEAD_LETTERED;
+        } catch (Throwable $failure) {
+            $span->recordException($failure);
+
+            return $this->retryOrDeadLetter(channel: $channel, message: $message, failure: $failure);
+        }
+
+        return $delivery === NotificationDelivery::Delivered ? self::DELIVERED : self::DUPLICATE;
+    }
+
+    private function record(string $outcome, float $durationSeconds): void
+    {
+        $meter = $this->telemetry->meter();
+        $attributes = ['outcome' => $outcome];
+
+        $meter->createCounter('notification.deliveries', '{message}', 'Decision messages settled, by outcome.')
+            ->add(1, $attributes);
+        $meter->createHistogram(
+            'notification.delivery.duration',
+            's',
+            'Time to settle a decision message.',
+            ['ExplicitBucketBoundaries' => self::DURATION_BUCKETS_SECONDS],
+        )
+            ->record($durationSeconds, $attributes);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private static function stringHeadersOf(AMQPMessage $message): array
+    {
+        $headers = [];
+
+        foreach (self::headersOf(message: $message) as $name => $value) {
+            if (\is_string($value)) {
+                $headers[$name] = $value;
+            }
+        }
+
+        return $headers;
+    }
+
+    /**
+     * @return self::RETRIED|self::DEAD_LETTERED
+     */
+    private function retryOrDeadLetter(AMQPChannel $channel, AMQPMessage $message, Throwable $failure): string
     {
         $retry = self::retryCountOf(message: $message) + 1;
 
@@ -95,7 +193,7 @@ final readonly class DecisionMessageHandler
                 failure: $failure,
             );
 
-            return;
+            return self::DEAD_LETTERED;
         }
 
         $this->logger->warning(
@@ -108,6 +206,8 @@ final readonly class DecisionMessageHandler
             queue: $this->settings->retryQueue(retry: $retry),
             headers: [self::RETRY_COUNT_HEADER => $retry, self::LAST_ERROR_HEADER => $failure->getMessage()],
         );
+
+        return self::RETRIED;
     }
 
     private function deadLetter(AMQPChannel $channel, AMQPMessage $message, string $reason, Throwable $failure): void

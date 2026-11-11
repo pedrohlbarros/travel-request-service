@@ -11,15 +11,19 @@ use Illuminate\Database\ConnectionInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Log\Context\Repository as Context;
 use Infrastructure\Shared\Messaging\Outbox\OutboxDomainEventPublisher;
+use Infrastructure\Shared\Observability\Telemetry;
 use LogicException;
+use OpenTelemetry\API\Trace\SpanInterface;
 use Tests\Support\LaravelTestCase;
 use Tests\Support\Shared\Messaging\SampleEvent;
 use Tests\Support\Shared\Messaging\SampleEventMessages;
 use Tests\Support\Shared\Messaging\UsesTheOutbox;
+use Tests\Support\Shared\Observability\CapturesTelemetry;
 use Tests\Support\Shared\Port\SequentialIdentifierGenerator;
 
 final class OutboxDomainEventPublisherTest extends LaravelTestCase
 {
+    use CapturesTelemetry;
     use RefreshDatabase;
     use UsesTheOutbox;
 
@@ -30,6 +34,14 @@ final class OutboxDomainEventPublisherTest extends LaravelTestCase
     private const string TRACEPARENT = '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01';
 
     private const string OCCURRED_AT = '2026-11-10 09:30:15';
+
+    private const string REQUEST_ID = 'request-id-of-the-decision';
+
+    protected function tearDown(): void
+    {
+        $this->releaseTelemetry();
+        parent::tearDown();
+    }
 
     public function test_StoresEachEventAsAPendingCloudEvent(): void
     {
@@ -93,6 +105,31 @@ final class OutboxDomainEventPublisherTest extends LaravelTestCase
         self::assertSame([OutboxDomainEventPublisher::TRACEPARENT => self::TRACEPARENT], $headers);
     }
 
+    public function test_WithTracingOnTheEventCarriesTheCurrentSpanAndTheRequestId(): void
+    {
+        $this->captureTelemetry();
+        $this->app->make(Context::class)
+            ->add('request_id', self::REQUEST_ID)
+            ->addHidden(OutboxDomainEventPublisher::TRACEPARENT, self::TRACEPARENT);
+        $telemetry = $this->app->make(Telemetry::class);
+
+        $telemetry->inSpan(
+            name: 'request',
+            work: function (SpanInterface $span): void {
+                $this->publisher()
+                    ->publish($this->sampleEvent());
+            },
+        );
+
+        $headers = json_decode($this->outboxColumn(column: 'headers')[0], true);
+        $span = $this->capturedSpan(name: 'request');
+
+        self::assertIsArray($headers);
+        self::assertIsString($headers['traceparent']);
+        self::assertStringStartsWith("00-{$span->getTraceId()}-{$span->getSpanId()}-", $headers['traceparent']);
+        self::assertSame(self::REQUEST_ID, $headers[OutboxDomainEventPublisher::REQUEST_ID]);
+    }
+
     public function test_HasNoHeadersOutsideATracedRequest(): void
     {
         $this->publisher()
@@ -121,6 +158,7 @@ final class OutboxDomainEventPublisherTest extends LaravelTestCase
             mappers: [new SampleEventMessages()],
             identifiers: new SequentialIdentifierGenerator(),
             context: $this->app->make(Context::class),
+            telemetry: $this->app->make(Telemetry::class),
             source: self::SOURCE,
         );
     }

@@ -17,6 +17,7 @@ use Infrastructure\Notification\Delivery\DecisionTextsFactory;
 use Infrastructure\Notification\Delivery\LaravelDecisionNotifier;
 use Infrastructure\Notification\Delivery\ReverbDecisionBroadcaster;
 use Infrastructure\Notification\Persistence\NotificationRows;
+use Infrastructure\Shared\Observability\Telemetry;
 use Infrastructure\Shared\Persistence\BinaryUuid;
 use Psr\Log\LogLevel;
 use Symfony\Component\Mailer\SentMessage;
@@ -154,6 +155,7 @@ final class DecisionDeliveryTest extends LaravelTestCase
             texts: $this->texts(),
             clock: new FrozenClock(frozenAt: $now),
             logger: $logger,
+            telemetry: $this->app->make(Telemetry::class),
         );
     }
 

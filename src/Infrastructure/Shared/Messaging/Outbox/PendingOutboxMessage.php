@@ -22,6 +22,21 @@ final readonly class PendingOutboxMessage
     ) {}
 
     /**
+     * @param array<string, string> $headers
+     */
+    public function withHeaders(array $headers): self
+    {
+        return new self(
+            idBytes: $this->idBytes,
+            eventId: $this->eventId,
+            exchange: $this->exchange,
+            routingKey: $this->routingKey,
+            payload: $this->payload,
+            headers: $headers,
+        );
+    }
+
+    /**
      * The row was written by the outbox itself, so its shape is known; the asserts only narrow types.
      */
     public static function fromRow(stdClass $row): self
