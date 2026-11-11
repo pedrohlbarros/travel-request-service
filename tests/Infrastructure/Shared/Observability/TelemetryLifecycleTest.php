@@ -83,6 +83,21 @@ final class TelemetryLifecycleTest extends LaravelTestCase
         self::assertCount(1, $this->exportedSpans);
     }
 
+    public function test_SpansGoOutAtMostOncePerInterval(): void
+    {
+        $telemetry = new Telemetry(
+            metricExportIntervalMilliseconds: self::HOUR_IN_MILLISECONDS,
+            spanExportIntervalMilliseconds: self::HOUR_IN_MILLISECONDS,
+        );
+        $this->endSpan(telemetry: $telemetry, name: 'first');
+        $telemetry->flush();
+        $this->endSpan(telemetry: $telemetry, name: 'second');
+
+        $telemetry->flush();
+
+        self::assertCount(1, $this->exportedSpans);
+    }
+
     public function test_TheEndOfAnOctaneRequestFlushes(): void
     {
         $this->app->make(Telemetry::class)
@@ -113,5 +128,16 @@ final class TelemetryLifecycleTest extends LaravelTestCase
         $registeredAfter = \count((array) $initializers->getValue());
 
         self::assertSame($registeredBefore + 1, $registeredAfter);
+    }
+
+    /**
+     * @param non-empty-string $name
+     */
+    private function endSpan(Telemetry $telemetry, string $name): void
+    {
+        $telemetry->tracer()
+            ->spanBuilder($name)
+            ->startSpan()
+            ->end();
     }
 }

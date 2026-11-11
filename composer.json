@@ -66,6 +66,11 @@
     "extra": {
         "laravel": {
             "dont-discover": []
+        },
+        "spi": {
+            "OpenTelemetry\\API\\Instrumentation\\AutoInstrumentation\\Instrumentation": [
+                "Infrastructure\\Shared\\Observability\\LaravelHttpAndQueryInstrumentation"
+            ]
         }
     },
     "config": {

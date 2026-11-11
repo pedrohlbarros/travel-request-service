@@ -108,7 +108,10 @@ final class TelemetryTest extends TestCase
     public function test_MetricsGoOutAtMostOncePerInterval(): void
     {
         $this->captureTelemetry();
-        $telemetry = new Telemetry(metricExportIntervalMilliseconds: self::LONG_INTERVAL_MILLISECONDS);
+        $telemetry = new Telemetry(
+            metricExportIntervalMilliseconds: self::LONG_INTERVAL_MILLISECONDS,
+            spanExportIntervalMilliseconds: self::LONG_INTERVAL_MILLISECONDS,
+        );
         $counter = $telemetry->meter()
             ->createCounter('test.counter');
         $counter->add(1);
@@ -165,6 +168,6 @@ final class TelemetryTest extends TestCase
 
     private function telemetry(): Telemetry
     {
-        return new Telemetry(metricExportIntervalMilliseconds: 1);
+        return new Telemetry(metricExportIntervalMilliseconds: 1, spanExportIntervalMilliseconds: 1);
     }
 }
