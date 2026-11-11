@@ -13,6 +13,8 @@ return [
 
     'refresh_token_ttl' => (int) env('REFRESH_TOKEN_TTL', 604800),
 
+    'role_cache_ttl' => (int) env('IDENTITY_ROLE_CACHE_TTL', 300),
+
     'rate_limit' => [
         'attempts_per_minute' => (int) env('AUTH_RATE_LIMIT_PER_MINUTE', 5),
     ],

@@ -11,14 +11,18 @@ use Application\Identity\Port\AccessTokenVerifier;
 use Application\Identity\Port\JsonWebKeySet;
 use Application\Identity\Port\OpaqueTokenGenerator;
 use Application\Identity\Port\PasswordHasher;
+use Application\Identity\Port\UserRoles;
 use Domain\Identity\Repository\RefreshTokenRepository;
 use Domain\Identity\Repository\UserRepository;
+use Illuminate\Contracts\Cache\Repository as Cache;
 use Illuminate\Contracts\Config\Repository as Config;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
+use Infrastructure\Identity\Cache\CachedUserRoles;
 use Infrastructure\Identity\Console\GenerateJwtKeysCommand;
 use Infrastructure\Identity\Persistence\EloquentRefreshTokenRepository;
 use Infrastructure\Identity\Persistence\EloquentUserRepository;
+use Infrastructure\Identity\Persistence\EloquentUserRoles;
 use Infrastructure\Identity\Security\LaravelPasswordHasher;
 use Infrastructure\Identity\Token\JwtKeyPair;
 use Infrastructure\Identity\Token\JwtSettings;
@@ -66,6 +70,19 @@ final class IdentityServiceProvider extends ServiceProvider
                 return JwtKeyPair::fromFiles(
                     privateKeyPath: $settings->privateKeyPath,
                     publicKeyPath: $settings->publicKeyPath,
+                );
+            },
+        );
+
+        $this->app->bind(
+            UserRoles::class,
+            static function (Application $app): UserRoles {
+                $config = $app->make(Config::class);
+
+                return new CachedUserRoles(
+                    roles: new EloquentUserRoles(),
+                    cache: $app->make(Cache::class),
+                    ttlSeconds: TypedConfig::positiveInt(config: $config, key: 'identity.role_cache_ttl'),
                 );
             },
         );

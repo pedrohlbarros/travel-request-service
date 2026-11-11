@@ -4,14 +4,16 @@ declare(strict_types=1);
 
 namespace Tests\Support\Identity\Repository;
 
+use Application\Identity\Port\UserRoles;
 use Domain\Identity\Entity\User;
+use Domain\Identity\Enum\Role;
 use Domain\Identity\Exception\EmailAlreadyRegistered;
 use Domain\Identity\Exception\UserNotFound;
 use Domain\Identity\Repository\UserRepository;
 use Domain\Identity\ValueObject\Email;
 use Domain\Identity\ValueObject\UserId;
 
-final class InMemoryUserRepository implements UserRepository
+final class InMemoryUserRepository implements UserRepository, UserRoles
 {
     /** @var array<string, User> */
     private array $userById = [];
@@ -25,6 +27,13 @@ final class InMemoryUserRepository implements UserRepository
         }
 
         return $user;
+    }
+
+    public function roleOf(UserId $id): ?Role
+    {
+        $user = $this->userById[$id->toString()] ?? null;
+
+        return $user?->role;
     }
 
     public function findByEmail(Email $email): ?User
