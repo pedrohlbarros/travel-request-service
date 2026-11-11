@@ -1,0 +1,9 @@
+[mysqld]
+server-id = 2
+gtid-mode = ON
+enforce-gtid-consistency = ON
+relay-log = relay-bin
+# Rebuilt from the primary when lost, so it skips its own binlog and the fsync per commit.
+skip-log-bin
+sync-binlog = 0
+innodb-flush-log-at-trx-commit = 2

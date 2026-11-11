@@ -13,6 +13,25 @@ receivers:
             family: [queue_coarse_metrics]
           static_configs:
             - targets: ["rabbitmq:15692"]
+        - job_name: cadvisor
+          scrape_interval: 5s
+          static_configs:
+            - targets: ["cadvisor:8080"]
+          metric_relabel_configs:
+            - source_labels: [__name__]
+              regex: container_cpu_usage_seconds_total|container_memory_working_set_bytes
+              action: keep
+            - source_labels: [container_label_com_docker_compose_project]
+              regex: travel-request-service
+              action: keep
+            - source_labels: [container_label_com_docker_compose_service]
+              regex: (.+)
+              target_label: compose_service
+            - source_labels: [compose_service]
+              regex: .+
+              action: keep
+            - regex: container_label_com_docker_compose_service|container_label_com_docker_compose_project|id|image
+              action: labeldrop
 
 processors:
   memory_limiter:

@@ -21,7 +21,7 @@ final readonly class EloquentUserRepository implements UserRepository
     public function get(UserId $id): User
     {
         $idBytes = BinaryUuid::toBytes(uuid: $id->toString());
-        $userRow = UserModel::query()
+        $userRow = UserModel::onPrimary()
             ->whereKey($idBytes)
             ->first();
 
@@ -34,7 +34,7 @@ final readonly class EloquentUserRepository implements UserRepository
 
     public function findByEmail(Email $email): ?User
     {
-        $userRow = UserModel::query()
+        $userRow = UserModel::onPrimary()
             ->where('email', $email->address)
             ->first();
 

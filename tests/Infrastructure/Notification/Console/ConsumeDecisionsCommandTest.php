@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Infrastructure\Notification\Console;
 
+use Application\Shared\Port\Clock;
+use DateTimeImmutable;
 use Illuminate\Console\Command;
 use Illuminate\Console\Signals;
 use Illuminate\Contracts\Config\Repository as Config;
@@ -13,9 +15,12 @@ use Infrastructure\Notification\Messaging\DecisionMessageHandler;
 use Infrastructure\Notification\Persistence\DatabaseProcessedEvents;
 use Infrastructure\Notification\Persistence\NotificationRows;
 use OpenTelemetry\API\Trace\SpanKind;
+use OpenTelemetry\SDK\Metrics\Data\HistogramDataPoint;
 use Tests\Support\LaravelTestCase;
+use Tests\Support\Notification\Fixture\DecisionMother;
 use Tests\Support\Notification\Fixture\UsesDecisionQueues;
 use Tests\Support\Shared\Observability\CapturesTelemetry;
+use Tests\Support\Shared\Port\FrozenClock;
 
 final class ConsumeDecisionsCommandTest extends LaravelTestCase
 {
@@ -93,6 +98,25 @@ final class ConsumeDecisionsCommandTest extends LaravelTestCase
             $this->capturedValue(metricName: 'notification.deliveries', attributes: ['outcome' => 'delivered']),
         );
         self::assertCount(1, $durations);
+    }
+
+    public function test_RecordsTheTimeFromTheDecisionToItsDelivery(): void
+    {
+        $decidedAt = new DateTimeImmutable(DecisionMother::DECIDED_AT);
+        $deliveredAt = $decidedAt->modify('+3 seconds');
+        $this->app->instance(Clock::class, new FrozenClock(frozenAt: $deliveredAt));
+        $this->captureTelemetry();
+        $this->publishApproval();
+        $this->publishApproval();
+
+        $this->consumeUntilEmpty();
+
+        $endToEnd = $this->capturedPoints(metricName: 'notification.end_to_end.duration');
+
+        self::assertCount(1, $endToEnd);
+        self::assertInstanceOf(HistogramDataPoint::class, $endToEnd[0]);
+        self::assertSame(1, $endToEnd[0]->count);
+        self::assertEqualsWithDelta(3.0, $endToEnd[0]->sum, 0.001);
     }
 
     public function test_EveryOutcomeIsCounted(): void

@@ -22,8 +22,9 @@ use Throwable;
  * The one way into OpenTelemetry for our own code. Everything goes through the global providers, which the SDK
  * builds lazily in each process from the OTEL_* settings, or which are no-ops when the SDK is disabled.
  *
- * Long-running processes never reach PHP's shutdown, so each unit of work (a request, an outbox batch, a
- * message) flushes spans and logs; metrics go out at most once per export interval.
+ * Long-running processes never reach PHP's shutdown, so the end of each unit of work (a request, an outbox
+ * batch, a message) is where telemetry leaves. Spans and logs go out at most once per span interval and metrics
+ * at most once per metric interval, so a busy worker sends one batch now and then instead of one per request.
  */
 final class Telemetry
 {
@@ -33,8 +34,11 @@ final class Telemetry
 
     private ?float $lastMetricExportAt = null;
 
+    private ?float $lastSpanExportAt = null;
+
     public function __construct(
         private readonly int $metricExportIntervalMilliseconds,
+        private readonly int $spanExportIntervalMilliseconds,
     ) {}
 
     public function tracer(): TracerInterface
@@ -121,6 +125,23 @@ final class Telemetry
 
     public function flush(): void
     {
+        $now = microtime(true);
+        $this->flushSpansAndLogsWhenDue(now: $now);
+        $this->flushMetricsWhenDue(now: $now);
+    }
+
+    private function flushSpansAndLogsWhenDue(float $now): void
+    {
+        $isDue = self::isDue(
+            lastExportAt: $this->lastSpanExportAt,
+            intervalMilliseconds: $this->spanExportIntervalMilliseconds,
+            now: $now,
+        );
+
+        if (! $isDue) {
+            return;
+        }
+
         $tracerProvider = Globals::tracerProvider();
         $loggerProvider = Globals::loggerProvider();
 
@@ -132,15 +153,17 @@ final class Telemetry
             $loggerProvider->forceFlush();
         }
 
-        $this->flushMetricsWhenDue();
+        $this->lastSpanExportAt = $now;
     }
 
-    private function flushMetricsWhenDue(): void
+    private function flushMetricsWhenDue(float $now): void
     {
         $meterProvider = Globals::meterProvider();
-        $now = microtime(true);
-        $intervalSeconds = $this->metricExportIntervalMilliseconds / self::MILLISECONDS_PER_SECOND;
-        $isDue = $this->lastMetricExportAt === null || $now - $this->lastMetricExportAt >= $intervalSeconds;
+        $isDue = self::isDue(
+            lastExportAt: $this->lastMetricExportAt,
+            intervalMilliseconds: $this->metricExportIntervalMilliseconds,
+            now: $now,
+        );
 
         if (! $isDue || ! $meterProvider instanceof SdkMeterProvider) {
             return;
@@ -148,5 +171,12 @@ final class Telemetry
 
         $meterProvider->forceFlush();
         $this->lastMetricExportAt = $now;
+    }
+
+    private static function isDue(?float $lastExportAt, int $intervalMilliseconds, float $now): bool
+    {
+        $intervalSeconds = $intervalMilliseconds / self::MILLISECONDS_PER_SECOND;
+
+        return $lastExportAt === null || $now - $lastExportAt >= $intervalSeconds;
     }
 }

@@ -7,6 +7,7 @@ namespace Infrastructure\Shared\Console;
 use Illuminate\Console\Command;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Support\Sleep;
+use Infrastructure\Shared\Health\MySqlReplicaStatus;
 use Infrastructure\Shared\Messaging\Outbox\OutboxDomainEventPublisher;
 use Infrastructure\Shared\Messaging\Outbox\OutboxRelay;
 use Infrastructure\Shared\Messaging\Outbox\OutboxRelaySettings;
@@ -30,8 +31,11 @@ final class RelayOutboxCommand extends Command
         LoggerInterface $logger,
         Telemetry $telemetry,
         ConnectionInterface $connection,
+        MySqlReplicaStatus $replica,
     ): int {
         self::observePendingMessages(telemetry: $telemetry, connection: $connection);
+        self::observeReplicaLag(telemetry: $telemetry, replica: $replica);
+        self::observeReplicaRunning(telemetry: $telemetry, replica: $replica);
 
         if ($this->option('once') === true) {
             $publishedMessages = $this->relayBatch(relay: $relay, logger: $logger);
@@ -76,6 +80,40 @@ final class RelayOutboxCommand extends Command
                     ->whereNull('published_at')
                     ->count();
                 $observer->observe($pendingMessages);
+            });
+    }
+
+    /**
+     * The relay runs once, so the replica lag is one series; nothing is observed while the replica is down.
+     */
+    private static function observeReplicaLag(Telemetry $telemetry, MySqlReplicaStatus $replica): void
+    {
+        $telemetry->meter()
+            ->createObservableGauge('mysql.replica.lag', 's', 'How far the read replica is behind the primary.')
+            ->observe(static function (ObserverInterface $observer) use ($replica): void {
+                $secondsBehind = rescue(static fn(): ?int => $replica->current()?->secondsBehindSource, report: false);
+
+                if (\is_int($secondsBehind)) {
+                    $observer->observe($secondsBehind);
+                }
+            });
+    }
+
+    /**
+     * One while both replication threads run, zero when they stopped, the replica is not set up or cannot be
+     * reached, so an alert can tell a stopped replica from a lagging one.
+     */
+    private static function observeReplicaRunning(Telemetry $telemetry, MySqlReplicaStatus $replica): void
+    {
+        $telemetry->meter()
+            ->createObservableGauge('mysql.replica.running', null, 'Whether the read replica is replicating.')
+            ->observe(static function (ObserverInterface $observer) use ($replica): void {
+                $isReplicating = rescue(
+                    static fn(): bool => $replica->current()?->isReplicating === true,
+                    rescue: false,
+                    report: false,
+                );
+                $observer->observe($isReplicating ? 1 : 0);
             });
     }
 

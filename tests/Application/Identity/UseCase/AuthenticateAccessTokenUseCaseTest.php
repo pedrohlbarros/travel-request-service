@@ -23,7 +23,7 @@ final class AuthenticateAccessTokenUseCaseTest extends IdentityUseCaseTestCase
         $this->useCase = new AuthenticateAccessTokenUseCase(
             verifier: $this->accessTokens,
             revokedAccessTokens: $this->revokedAccessTokens,
-            users: $this->users,
+            roles: $this->users,
             clock: $this->clock,
         );
     }

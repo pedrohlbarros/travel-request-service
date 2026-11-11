@@ -45,6 +45,15 @@ jobs:
       - name: QA
         run: make qa
 
+      - name: Load test data
+        run: make load-seed
+
+      - name: Load smoke
+        run: make load-smoke RUN=ci
+
+      - name: Concurrency guarantee
+        run: make load-concurrency RUN=ci
+
       - name: Container logs
         if: failure()
         run: docker compose logs --no-color --tail=200

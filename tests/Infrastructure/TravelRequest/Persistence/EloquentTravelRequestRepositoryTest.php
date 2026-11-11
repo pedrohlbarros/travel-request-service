@@ -135,9 +135,9 @@ final class EloquentTravelRequestRepositoryTest extends LaravelTestCase
     public function test_AWriterThatLosesTheRaceAfterReadingTheRowIsRejected(): void
     {
         $this->travelRequests->add(travelRequest: Mother::requested());
+        $this->letAnotherWriterCommitRightAfterTheRowIsRead();
         $travelRequest = $this->storedTravelRequest();
         $this->approve(travelRequest: $travelRequest);
-        $this->letAnotherWriterCommitRightAfterTheRowIsRead();
 
         $this->expectException(TravelRequestVersionMismatch::class);
         $this->expectExceptionMessageIs('Travel request ' . Mother::TRAVEL_REQUEST_ID . ' is at version 2, not 1.');

@@ -26,7 +26,7 @@ final class HealthEndpointsTest extends LaravelTestCase
         $response->assertOk()
             ->assertExactJson([
                 'status' => 'ok',
-                'checks' => ['mysql' => 'ok', 'redis' => 'ok', 'rabbitmq' => 'ok'],
+                'checks' => ['mysql' => 'ok', 'mysql_replica' => 'ok', 'redis' => 'ok', 'rabbitmq' => 'ok'],
             ]);
     }
 
@@ -51,6 +51,6 @@ final class HealthEndpointsTest extends LaravelTestCase
     {
         $registeredChecks = iterator_to_array($this->app->tagged(SharedServiceProvider::HEALTH_CHECKS_TAG));
 
-        self::assertCount(3, $registeredChecks);
+        self::assertCount(4, $registeredChecks);
     }
 }

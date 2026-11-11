@@ -21,6 +21,7 @@ use Infrastructure\Shared\Console\OutboxStatusCommand;
 use Infrastructure\Shared\Console\RelayOutboxCommand;
 use Infrastructure\Shared\Console\TapMessagesCommand;
 use Infrastructure\Shared\Health\MySqlHealthCheck;
+use Infrastructure\Shared\Health\MySqlReplicaHealthCheck;
 use Infrastructure\Shared\Health\RabbitMqHealthCheck;
 use Infrastructure\Shared\Health\RedisHealthCheck;
 use Infrastructure\Shared\Identifier\LaravelUuid7Generator;
@@ -72,18 +73,26 @@ final class SharedServiceProvider extends ServiceProvider
             Telemetry::class,
             static function (Application $app): Telemetry {
                 $config = $app->make(Config::class);
-                $intervalMilliseconds = TypedConfig::positiveInt(
+                $metricIntervalMilliseconds = TypedConfig::positiveInt(
                     config: $config,
                     key: 'observability.metric_export_interval_ms',
                 );
+                $spanIntervalMilliseconds = TypedConfig::positiveInt(
+                    config: $config,
+                    key: 'observability.span_export_interval_ms',
+                );
 
-                return new Telemetry(metricExportIntervalMilliseconds: $intervalMilliseconds);
+                return new Telemetry(
+                    metricExportIntervalMilliseconds: $metricIntervalMilliseconds,
+                    spanExportIntervalMilliseconds: $spanIntervalMilliseconds,
+                );
             },
         );
 
         $this->app->tag(
             [
                 MySqlHealthCheck::class,
+                MySqlReplicaHealthCheck::class,
                 RedisHealthCheck::class,
                 RabbitMqHealthCheck::class,
             ],

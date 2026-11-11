@@ -9,6 +9,13 @@ putenv("DB_DATABASE={$testDatabase}");
 $_ENV['DB_DATABASE'] = $testDatabase;
 $_SERVER['DB_DATABASE'] = $testDatabase;
 
+$readHost = getenv('DB_READ_HOST');
+
+if (\is_string($readHost)) {
+    $_ENV['DB_READ_HOST'] = $readHost;
+    $_SERVER['DB_READ_HOST'] = $readHost;
+}
+
 require __DIR__ . '/../vendor/autoload.php';
 
 OpenTelemetry\API\Globals::registerInitializer(
