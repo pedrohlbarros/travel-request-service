@@ -37,6 +37,7 @@ final readonly class AssignRequestContext
         $traceId = $this->traceIdFrom(request: $request);
         if ($traceId !== null) {
             $this->context->add('trace_id', $traceId);
+            $this->context->addHidden('traceparent', $request->headers->get(self::TRACEPARENT_HEADER));
         }
 
         $response = $next($request);
