@@ -7,7 +7,7 @@ Os testes de carga usam o [k6](https://grafana.com/docs/k6/), no perfil `load` d
 | Cenário | Comando | O que faz | Falha o teste quando |
 |---|---|---|---|
 | Smoke | `make load-smoke` | 1 VU por 30 s com a mistura completa | algum check falha, erros ≥ 1% ou p95 ≥ 500 ms |
-| Load | `make load-load` | Taxa constante de cerca de 100 req/s por 5 min (carga de projeto) | as metas de latência por operação, erros ≥ 0,1%, menos de 95 req/s ou iterações descartadas |
+| Load | `make load-load` | Taxa constante de cerca de 100 req/s por 5 min (carga de projeto) | p95 de alguma operação acima da meta, p99 de leitura ou de escrita acima da meta, erros ≥ 0,1%, menos de 95 req/s ou iterações descartadas |
 | Capacity | `make load-capacity` | 50 VUs por 5 min, o mais rápido que o serviço responder | erros ≥ 0,1% ou checks < 99%; vazão e latência são só registradas |
 | Stress | `make load-stress` | 50 → 400 VUs em estágios de 2 min | erros > 20% (interrompe); o resumo aponta o teto |
 | Concorrência | `make load-concurrency` | 20 admins decidem cada um de 50 pedidos no mesmo instante | qualquer pedido com mais de uma vitória, status fora de 200/409/412 ou versão final diferente de 2 |
@@ -27,13 +27,15 @@ A carga de projeto é de **100 req/s**, cerca de 60× o pico estimado de uma emp
 
 | Ponto | Meta |
 |---|---|
-| Leitura (listar, detalhe) | p95 ≤ 150 ms, p99 ≤ 300 ms |
-| Escrita (criar, editar, aprovar, cancelar) | p95 ≤ 250 ms, p99 ≤ 500 ms |
+| Leitura (listar, detalhe) | p95 ≤ 150 ms por operação; p99 ≤ 300 ms no conjunto das leituras |
+| Escrita (criar, editar, aprovar, cancelar) | p95 ≤ 250 ms por operação; p99 ≤ 500 ms no conjunto das escritas |
 | Erros | < 0,1% |
 | CPU na carga de projeto | ≤ 70% |
 | Teto do stress | ≥ 100 VUs dentro da meta de leitura |
 | Notificação ponta a ponta | p95 ≤ 5 s, sem fila crescendo |
 | Custo do tracing | ≤ 10% de vazão |
+
+O p99 é cobrado no conjunto de leituras e no de escritas, não por operação: operações raras, como a edição, têm poucas requests para um p99 estável ([ADR 0045](adr/0045-p99-no-agregado.md)). O resumo do k6 mostra o p99 de cada operação mesmo assim.
 
 ## Como rodar
 
