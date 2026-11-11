@@ -15,7 +15,7 @@ FORWARD_RABBITMQ_UI_PORT  ?= 15672
 FORWARD_MAILPIT_SMTP_PORT ?= 1025
 FORWARD_MAILPIT_UI_PORT   ?= 8025
 
-SERVICES := app mysql redis rabbitmq mailpit
+SERVICES := app outbox-relay mysql redis rabbitmq mailpit
 
 ##@ Help
 
@@ -48,7 +48,7 @@ ps: ## Show container status and health
 	$(COMPOSE) ps
 
 urls: ## Show container IP, host port and URL of each service
-	@printf "\033[1m%-10s %-16s %-18s %s\033[0m\n" SERVICE "CONTAINER IP" "HOST" "URL"
+	@printf "\033[1m%-12s %-16s %-18s %s\033[0m\n" SERVICE "CONTAINER IP" "HOST" "URL"
 	@for service in $(SERVICES); do \
 		id=$$($(COMPOSE) ps -q $$service 2>/dev/null); \
 		ip=$$( [ -n "$$id" ] && docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}' $$id | xargs || echo "not running"); \
@@ -58,8 +58,9 @@ urls: ## Show container IP, host port and URL of each service
 			redis)    host="localhost:$(FORWARD_REDIS_PORT)"; url="redis://localhost:$(FORWARD_REDIS_PORT)" ;; \
 			rabbitmq) host="localhost:$(FORWARD_RABBITMQ_PORT)"; url="http://localhost:$(FORWARD_RABBITMQ_UI_PORT) (management UI)" ;; \
 			mailpit)  host="localhost:$(FORWARD_MAILPIT_SMTP_PORT)"; url="http://localhost:$(FORWARD_MAILPIT_UI_PORT) (web UI)" ;; \
+			outbox-relay) host="-"; url="no port (make relay-logs)" ;; \
 		esac; \
-		printf "%-10s %-16s %-18s %s\n" $$service "$${ip:-not running}" "$$host" "$$url"; \
+		printf "%-12s %-16s %-18s %s\n" $$service "$${ip:-not running}" "$$host" "$$url"; \
 	done
 
 ##@ Setup
@@ -106,6 +107,18 @@ seed: ## Seed the demo users: admin@, luffy@ and zoro@example.com (password: pas
 docs: ## Export the OpenAPI document to storage/openapi.json and print the docs URL (open only with APP_ENV=local)
 	$(PHP) artisan scramble:export
 	@echo "API docs: http://localhost:$(FORWARD_APP_PORT)/docs/api  (OpenAPI JSON: /docs/api.json)"
+
+##@ Messaging
+
+.PHONY: events outbox relay-logs
+events: ## Print the travel request events on the inspection queue (the first run creates the queue; LIMIT=20)
+	$(PHP) artisan messaging:tap --limit=$(or $(LIMIT),20)
+
+outbox: ## Show how many outbox messages are pending and published
+	$(PHP) artisan outbox:status
+
+relay-logs: ## Follow the outbox relay logs
+	$(COMPOSE) logs -f --tail=100 outbox-relay
 
 ##@ Quality
 

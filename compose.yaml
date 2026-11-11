@@ -30,6 +30,21 @@ services:
       <<: *healthcheck
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8000/health/live"]
 
+  outbox-relay:
+    image: travel-request-service/app:dev
+    command: ["php", "artisan", "outbox:relay"]
+    restart: unless-stopped
+    stop_signal: SIGTERM
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      app: { condition: service_healthy }
+      mysql: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD", "pgrep", "-f", "outbox:relay"]
+
   mysql:
     image: mysql:8.4
     ports:
