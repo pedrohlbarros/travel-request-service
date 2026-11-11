@@ -43,7 +43,10 @@
             "Application\\": "src/Application/",
             "Infrastructure\\": "src/Infrastructure/",
             "Interfaces\\": "src/Interfaces/"
-        }
+        },
+        "files": [
+            "bootstrap/telemetry.php"
+        ]
     },
     "autoload-dev": {
         "psr-4": {

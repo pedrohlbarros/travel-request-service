@@ -10,6 +10,7 @@ use Application\Shared\Port\IdentifierGenerator;
 use Application\Shared\Port\Transaction;
 use Application\Shared\UseCase\CheckReadinessUseCase;
 use Illuminate\Contracts\Config\Repository as Config;
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Log\Context\Repository as Context;
@@ -29,7 +30,10 @@ use Infrastructure\Shared\Messaging\Outbox\OutboxRelay;
 use Infrastructure\Shared\Messaging\Outbox\OutboxRelaySettings;
 use Infrastructure\Shared\Messaging\RabbitMq\RabbitMqOutboxPublisher;
 use Infrastructure\Shared\Messaging\RabbitMqConnectionFactory;
+use Infrastructure\Shared\Observability\ProcessMetrics;
+use Infrastructure\Shared\Observability\Telemetry;
 use Infrastructure\Shared\Persistence\DatabaseTransaction;
+use Laravel\Octane\Events\RequestTerminated;
 
 final class SharedServiceProvider extends ServiceProvider
 {
@@ -64,6 +68,19 @@ final class SharedServiceProvider extends ServiceProvider
 
         $this->registerMessaging();
 
+        $this->app->singleton(
+            Telemetry::class,
+            static function (Application $app): Telemetry {
+                $config = $app->make(Config::class);
+                $intervalMilliseconds = TypedConfig::positiveInt(
+                    config: $config,
+                    key: 'observability.metric_export_interval_ms',
+                );
+
+                return new Telemetry(metricExportIntervalMilliseconds: $intervalMilliseconds);
+            },
+        );
+
         $this->app->tag(
             [
                 MySqlHealthCheck::class,
@@ -78,8 +95,13 @@ final class SharedServiceProvider extends ServiceProvider
             ->giveTagged(self::HEALTH_CHECKS_TAG);
     }
 
-    public function boot(): void
+    public function boot(Dispatcher $events, Telemetry $telemetry): void
     {
+        ProcessMetrics::register(telemetry: $telemetry);
+        $events->listen(RequestTerminated::class, static function () use ($telemetry): void {
+            $telemetry->flush();
+        });
+
         if ($this->app->runningInConsole()) {
             $this->commands([RelayOutboxCommand::class, OutboxStatusCommand::class, TapMessagesCommand::class]);
         }
@@ -99,6 +121,7 @@ final class SharedServiceProvider extends ServiceProvider
                     mappers: $mappers,
                     identifiers: $app->make(IdentifierGenerator::class),
                     context: $app->make(Context::class),
+                    telemetry: $app->make(Telemetry::class),
                     source: TypedConfig::nonEmptyString(config: $config, key: 'messaging.source'),
                 );
             },
@@ -134,6 +157,7 @@ final class SharedServiceProvider extends ServiceProvider
                     connection: $app->make(ConnectionInterface::class),
                     publisher: $publisher,
                     clock: $app->make(Clock::class),
+                    telemetry: $app->make(Telemetry::class),
                     batchSize: $settings->batchSize,
                 );
             },
