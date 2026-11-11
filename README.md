@@ -2,17 +2,33 @@
 
 Microsserviço para gestão de pedidos de viagem corporativa. Usuários autenticados por JWT criam e acompanham os próprios pedidos. Administradores aprovam ou cancelam, e a cada decisão o solicitante é notificado por e-mail, na API e em tempo real.
 
-O serviço é feito em Laravel com DDD e arquitetura hexagonal, separado nos contextos Identity, TravelRequest e Notification. Cada decisão é gravada na mesma transação que o evento que a anuncia (padrão outbox). Um processo separado publica esses eventos no RabbitMQ, e o serviço de notificação os consome sem entregar a mesma notificação duas vezes. A concorrência entre decisões é controlada por versão (`ETag`/`If-Match`). As leituras passam por cache no Redis e por uma réplica de leitura do MySQL.
-
-O projeto inclui também:
-- observabilidade completa, com traces de ponta a ponta, métricas, logs e alertas;
+O serviço é feito em Laravel e dividido em três contextos: Identity, TravelRequest e Notification. Além da API, o projeto traz:
+- observabilidade, com traces de ponta a ponta, métricas, logs e alertas;
 - testes de carga com metas definidas e resultados medidos;
 - diagramas de arquitetura navegáveis, com os fluxos reproduzidos passo a passo;
 - uma página que mostra as notificações chegando ao vivo.
 
-As decisões de arquitetura estão registradas em [docs/adr](docs/adr/README.md), e o detalhe da arquitetura em [docs/arquitetura.md](docs/arquitetura.md).
-
 ![Página de notificações recebendo uma decisão ao vivo](docs/images/notification.png)
+
+## Decisões
+
+O teste foi tratado como um microsserviço de produção. Cada ponto foi decidido antes de ser implementado e registrado num ADR, e o trabalho foi dividido em fases, cada uma com plano, validação e pull request.
+
+- **Arquitetura:** DDD com arquitetura hexagonal. As regras de negócio e os casos de uso não dependem do Laravel; o framework fica nas bordas (HTTP, banco e mensageria).
+- **Mudança de status:** aprovar e cancelar são ações próprias (`/approve` e `/cancel`), restritas ao administrador, em vez de um campo editável.
+- **Concorrência:** cada pedido tem uma versão, e toda escrita informa a versão em que se baseia (`If-Match`). Duas decisões simultâneas nunca valem as duas.
+- **Notificação confiável:** a decisão e o evento que a anuncia são gravados na mesma transação. Um processo separado publica o evento no RabbitMQ, e o consumidor entrega por e-mail, na API e por WebSocket. Nada é entregue duas vezes, e uma falha volta a ser tentada até ir para uma fila de mensagens com erro.
+- **Autenticação:** JWT assinado com chave assimétrica, access token de 15 minutos e refresh token rotativo, com revogação no logout.
+- **Desempenho:** Octane com Swoole, cache no Redis e réplica de leitura do MySQL, com metas de latência medidas em testes de carga.
+- **Qualidade:** 100% de cobertura e de mutation testing no domínio, análise estática no nível máximo e regras de arquitetura verificadas no CI.
+
+Interpretações do enunciado:
+- O administrador vê os pedidos de todos e pode aprovar o próprio pedido. O usuário comum vê, cria e edita só os seus.
+- O nome do solicitante vem do usuário autenticado, não do corpo da requisição.
+- Um pedido aprovado não pode ser cancelado: só pedidos ainda solicitados mudam de status.
+- A API autenticada não tem limite de requisições, de propósito, para os testes de carga medirem o teto do serviço. O login tem limite.
+
+O detalhe está em [docs/arquitetura.md](docs/arquitetura.md), e cada decisão em [docs/adr](docs/adr/README.md).
 
 ## Tecnologias
 
