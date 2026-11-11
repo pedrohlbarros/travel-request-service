@@ -35,9 +35,11 @@ Microsserviço em Laravel para gestão de pedidos de viagem corporativa. É um t
 | Notificação | Mail (Mailpit), database (in-app), broadcast (Reverb) | [0020](docs/adr/0020-canais-de-notificacao.md) |
 | Imagens | App `php:8.5-cli-alpine` + Swoole 6.2.x; MySQL 8.4, Redis 8.x, RabbitMQ 4.3-management, Mailpit v1.33; ressalva musl medida na fase 07 | [0022](docs/adr/0022-imagem-base-e-versoes.md) |
 | Fundação | phpredis, `php-amqplib`, PCOV, CaptainHook (docker + `ramsey/conventional-commits`), cache/queue redis, session array, skeleton enxuto | [0023](docs/adr/0023-dependencias-e-drivers-da-fundacao.md) |
-| Shared/Deptrac | Transversal em `src/<Camada>/Shared`; `Interfaces` não depende de `Infrastructure`; contexts só se falam por eventos | [0024](docs/adr/0024-modulo-shared-e-regras-do-deptrac.md) |
+| Shared/Deptrac | Transversal em `src/<Camada>/Shared`; `Interfaces` não depende de `Infrastructure`; contexts só se falam por eventos (leitura de tabela alheia só por model próprio na Infrastructure, [0034](docs/adr/0034-relacionamento-pedido-usuario.md)) | [0024](docs/adr/0024-modulo-shared-e-regras-do-deptrac.md) |
 | Identity | Login por e-mail, Argon2id (8–72), register 201 sem tokens, resposta OAuth2, `AuthenticatedUser` em `Interfaces\Http\Shared` para os outros contexts, seeder admin/luffy/zoro | [0030](docs/adr/0030-detalhes-do-identity.md) |
 | Erros | Formato da entrada = `/problems/validation-failed`; estado/regra e protocolo = `type` próprio; catálogo em `docs/api/problems.md` | [0031](docs/adr/0031-problem-details.md) |
+| API de pedidos | PATCH parcial (no-op sem versão); ordem 403 → 404 → 412 → 409; ETag strong `"<version>"`; Policy só por papel; cache em decorators da Infrastructure; cursor keyset próprio por `id`; Scramble só em local | [0033](docs/adr/0033-detalhes-da-api-de-pedidos.md) |
+| Pedido–usuário | FKs `requester_id`/`decided_by` → `users` (`restrictOnDelete`); relacionamento na Infrastructure por `RequesterModel` só leitura; resposta com `requester`/`decided_by` `{id, name}`; escritas devolvem o pedido relido | [0034](docs/adr/0034-relacionamento-pedido-usuario.md) |
 | CI | GitHub Actions builda a imagem e roda `make up` + `make qa` via compose (sem `services:`) | [0021](docs/adr/0021-ci-com-docker-compose.md) |
 | Docs | Planos + ADRs + diagramas; README enxuto | [0013](docs/adr/0013-documentacao.md) |
 | Padrões | Código, Application (CQRS leve), API, IDs, testes, automação | 0014–0019 |
