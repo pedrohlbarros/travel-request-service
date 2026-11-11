@@ -13,7 +13,7 @@ return [
 
     'api_domain' => null,
 
-    'export_path' => 'storage/openapi.json',
+    'export_path' => 'docs/api/openapi.json',
 
     'cache' => [
         'key' => 'scramble.openapi',
