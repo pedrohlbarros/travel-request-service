@@ -100,6 +100,13 @@ admin: ## Create an admin (NAME="..." EMAIL=... PASSWORD=...; asks for what is m
 seed: ## Seed the demo users: admin@, luffy@ and zoro@example.com (password: password123)
 	$(PHP) artisan db:seed --class='Infrastructure\Identity\Seeder\DemoUsersSeeder' --force
 
+##@ API
+
+.PHONY: docs
+docs: ## Export the OpenAPI document to storage/openapi.json and print the docs URL (open only with APP_ENV=local)
+	$(PHP) artisan scramble:export
+	@echo "API docs: http://localhost:$(FORWARD_APP_PORT)/docs/api  (OpenAPI JSON: /docs/api.json)"
+
 ##@ Quality
 
 .PHONY: lint lint-fix stan arch qa
