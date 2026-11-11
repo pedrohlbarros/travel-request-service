@@ -5,10 +5,14 @@ declare(strict_types=1);
 namespace Infrastructure\Shared\Console;
 
 use Illuminate\Console\Command;
+use Illuminate\Database\ConnectionInterface;
 use Illuminate\Support\Sleep;
+use Infrastructure\Shared\Messaging\Outbox\OutboxDomainEventPublisher;
 use Infrastructure\Shared\Messaging\Outbox\OutboxRelay;
 use Infrastructure\Shared\Messaging\Outbox\OutboxRelaySettings;
 use Infrastructure\Shared\Messaging\Outbox\PollDelay;
+use Infrastructure\Shared\Observability\Telemetry;
+use OpenTelemetry\API\Metrics\ObserverInterface;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
@@ -20,10 +24,18 @@ final class RelayOutboxCommand extends Command
 
     private bool $isStopping = false;
 
-    public function handle(OutboxRelay $relay, OutboxRelaySettings $settings, LoggerInterface $logger): int
-    {
+    public function handle(
+        OutboxRelay $relay,
+        OutboxRelaySettings $settings,
+        LoggerInterface $logger,
+        Telemetry $telemetry,
+        ConnectionInterface $connection,
+    ): int {
+        self::observePendingMessages(telemetry: $telemetry, connection: $connection);
+
         if ($this->option('once') === true) {
             $publishedMessages = $this->relayBatch(relay: $relay, logger: $logger);
+            $telemetry->flush();
 
             return $publishedMessages === null ? self::FAILURE : self::SUCCESS;
         }
@@ -42,6 +54,7 @@ final class RelayOutboxCommand extends Command
             $pollDelay = $publishedMessages === null
                 ? $pollDelay->backedOff()
                 : $pollDelay->afterBatch(publishedMessages: $publishedMessages);
+            $telemetry->flush();
             Sleep::for($pollDelay->milliseconds)
                 ->milliseconds();
         }
@@ -49,6 +62,21 @@ final class RelayOutboxCommand extends Command
         $this->components->info('Outbox relay stopped.');
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Only the relay reports the backlog, so it is one series however many web workers run.
+     */
+    private static function observePendingMessages(Telemetry $telemetry, ConnectionInterface $connection): void
+    {
+        $telemetry->meter()
+            ->createObservableGauge('outbox.pending', '{message}', 'Outbox messages not yet published.')
+            ->observe(static function (ObserverInterface $observer) use ($connection): void {
+                $pendingMessages = $connection->table(OutboxDomainEventPublisher::TABLE)
+                    ->whereNull('published_at')
+                    ->count();
+                $observer->observe($pendingMessages);
+            });
     }
 
     /**

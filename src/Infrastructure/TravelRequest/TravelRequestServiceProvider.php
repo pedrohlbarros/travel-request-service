@@ -11,11 +11,13 @@ use Illuminate\Contracts\Config\Repository as Config;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
 use Infrastructure\Shared\Config\TypedConfig;
+use Infrastructure\Shared\Observability\Telemetry;
 use Infrastructure\Shared\SharedServiceProvider;
 use Infrastructure\TravelRequest\Cache\CachedTravelRequestQueries;
 use Infrastructure\TravelRequest\Cache\CacheInvalidatingTravelRequestRepository;
 use Infrastructure\TravelRequest\Cache\TravelRequestCacheSettings;
 use Infrastructure\TravelRequest\Messaging\TravelRequestEventMessages;
+use Infrastructure\TravelRequest\Observability\MetricsRecordingTravelRequestRepository;
 use Infrastructure\TravelRequest\Persistence\EloquentTravelRequestRepository;
 use Infrastructure\TravelRequest\Query\DatabaseTravelRequestQueries;
 
@@ -37,11 +39,20 @@ final class TravelRequestServiceProvider extends ServiceProvider
 
         $this->app->bind(
             TravelRequestRepository::class,
-            static fn(Application $app): TravelRequestRepository => new CacheInvalidatingTravelRequestRepository(
-                travelRequests: new EloquentTravelRequestRepository(),
-                cache: $app->make(Cache::class),
-                transactions: $app->make('db.transactions'),
-            ),
+            static function (Application $app): TravelRequestRepository {
+                $transactions = $app->make('db.transactions');
+                $cacheInvalidating = new CacheInvalidatingTravelRequestRepository(
+                    travelRequests: new EloquentTravelRequestRepository(),
+                    cache: $app->make(Cache::class),
+                    transactions: $transactions,
+                );
+
+                return new MetricsRecordingTravelRequestRepository(
+                    travelRequests: $cacheInvalidating,
+                    telemetry: $app->make(Telemetry::class),
+                    transactions: $transactions,
+                );
+            },
         );
 
         $this->app->bind(

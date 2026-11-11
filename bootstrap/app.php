@@ -9,6 +9,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Interfaces\Http\Shared\Middleware\AssignRequestContext;
+use Interfaces\Http\Shared\Middleware\RecordRequestMetrics;
+use Interfaces\Http\Shared\Problem\ClientErrorReporter;
 use Interfaces\Http\Shared\Problem\ProblemDetailsRenderer;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -22,11 +24,16 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(static function (Middleware $middleware): void {
-        $middleware->prepend(AssignRequestContext::class);
+        $middleware->prepend([AssignRequestContext::class, RecordRequestMetrics::class]);
         $middleware->redirectGuestsTo(static fn(): ?string => null);
     })
     ->withExceptions(static function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(static fn(): bool => true);
+        $exceptions->report(static function (Throwable $exception): bool {
+            $reporter = app(ClientErrorReporter::class);
+
+            return $reporter->report(exception: $exception);
+        });
         $exceptions->render(static function (Throwable $exception, Request $request): JsonResponse {
             $renderer = app(ProblemDetailsRenderer::class);
 

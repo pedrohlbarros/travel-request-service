@@ -11,6 +11,8 @@ use DateTimeZone;
 use Domain\Notification\ValueObject\TravelRequestDecision;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\Factory as Broadcasting;
+use Infrastructure\Shared\Observability\Telemetry;
+use OpenTelemetry\API\Trace\SpanKind;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
@@ -27,6 +29,7 @@ final readonly class ReverbDecisionBroadcaster implements DecisionBroadcaster
         private DecisionTextsFactory $texts,
         private Clock $clock,
         private LoggerInterface $logger,
+        private Telemetry $telemetry,
     ) {}
 
     public function broadcast(TravelRequestDecision $decision): void
@@ -43,8 +46,15 @@ final readonly class ReverbDecisionBroadcaster implements DecisionBroadcaster
         ];
 
         try {
-            $this->broadcasting->connection()
-                ->broadcast([$channel], self::EVENT, $payload);
+            $this->telemetry->inSpan(
+                name: 'notification.broadcast',
+                work: function () use ($channel, $payload): void {
+                    $this->broadcasting->connection()
+                        ->broadcast([$channel], self::EVENT, $payload);
+                },
+                kind: SpanKind::KIND_CLIENT,
+                attributes: ['messaging.destination.name' => (string) $channel],
+            );
         } catch (Throwable $exception) {
             $this->logger->warning(
                 'Broadcast of a decision failed; the stored notification stays readable.',

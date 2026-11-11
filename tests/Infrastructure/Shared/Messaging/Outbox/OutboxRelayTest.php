@@ -14,7 +14,10 @@ use Infrastructure\Shared\Messaging\Outbox\OutboxDomainEventPublisher;
 use Infrastructure\Shared\Messaging\Outbox\OutboxRelay;
 use Infrastructure\Shared\Messaging\RabbitMq\RabbitMqOutboxPublisher;
 use Infrastructure\Shared\Messaging\RabbitMqConnectionFactory;
+use Infrastructure\Shared\Observability\Telemetry;
 use Infrastructure\Shared\Persistence\BinaryUuid;
+use OpenTelemetry\API\Trace\SpanKind;
+use OpenTelemetry\API\Trace\StatusCode;
 use PhpAmqpLib\Message\AMQPMessage;
 use PhpAmqpLib\Wire\AMQPTable;
 use RuntimeException;
@@ -22,6 +25,7 @@ use Tests\Support\LaravelTestCase;
 use Tests\Support\Shared\Messaging\RabbitMqTestQueue;
 use Tests\Support\Shared\Messaging\SampleEventMessages;
 use Tests\Support\Shared\Messaging\UsesTheOutbox;
+use Tests\Support\Shared\Observability\CapturesTelemetry;
 use Tests\Support\Shared\Port\FrozenClock;
 use Tests\Support\Shared\Port\SequentialIdentifierGenerator;
 use Throwable;
@@ -32,6 +36,7 @@ use Throwable;
  */
 final class OutboxRelayTest extends LaravelTestCase
 {
+    use CapturesTelemetry;
     use DatabaseTruncation;
     use UsesTheOutbox;
 
@@ -40,6 +45,10 @@ final class OutboxRelayTest extends LaravelTestCase
     private const string TRACEPARENT = '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01';
 
     private const string PEER_CONNECTION = 'outbox_relay_peer';
+
+    private const string TRACE_ID = '4bf92f3577b34da6a3ce929d0e0e4736';
+
+    private const string PARENT_SPAN_ID = '00f067aa0ba902b7';
 
     private const int UNUSED_PORT = 1;
 
@@ -61,6 +70,7 @@ final class OutboxRelayTest extends LaravelTestCase
             ->truncate();
         $this->app->make(DatabaseManager::class)
             ->purge(self::PEER_CONNECTION);
+        $this->releaseTelemetry();
         parent::tearDown();
     }
 
@@ -90,6 +100,63 @@ final class OutboxRelayTest extends LaravelTestCase
         self::assertInstanceOf(AMQPTable::class, $headers);
         self::assertSame([OutboxDomainEventPublisher::TRACEPARENT => self::TRACEPARENT], $headers->getNativeData());
         self::assertSame($this->outboxColumn(column: 'payload')[0], $first->getBody());
+    }
+
+    public function test_EachMessageIsPublishedInASpanThatContinuesTheStoredTrace(): void
+    {
+        $queue = $this->boundQueue();
+        $this->app->make(Context::class)
+            ->addHidden(OutboxDomainEventPublisher::TRACEPARENT, self::TRACEPARENT);
+        $this->storeSampleEvents(subjects: ['traced']);
+        $this->captureTelemetry();
+
+        $this->relay()
+            ->relayBatch();
+
+        $publishSpan = $this->capturedSpan(name: 'publish ' . SampleEventMessages::EXCHANGE);
+        $headers = $queue->receivedMessages()[0]->get('application_headers');
+        \assert($headers instanceof AMQPTable);
+        $sentTraceparent = $headers->getNativeData()['traceparent'] ?? null;
+        $routingKey = $publishSpan->getAttributes()
+            ->get('messaging.rabbitmq.destination.routing_key');
+        $publishedTraceparentPrefix = '00-' . self::TRACE_ID . '-' . $publishSpan->getSpanId() . '-';
+
+        self::assertSame(SpanKind::KIND_PRODUCER, $publishSpan->getKind());
+        self::assertSame(self::TRACE_ID, $publishSpan->getTraceId());
+        self::assertSame(self::PARENT_SPAN_ID, $publishSpan->getParentSpanId());
+        self::assertSame(SampleEventMessages::ROUTING_KEY, $routingKey);
+        self::assertIsString($sentTraceparent);
+        self::assertStringStartsWith($publishedTraceparentPrefix, $sentTraceparent);
+        self::assertSame(
+            1,
+            $this->capturedValue(
+                metricName: 'outbox.published',
+                attributes: ['messaging.rabbitmq.destination.routing_key' => SampleEventMessages::ROUTING_KEY],
+            ),
+        );
+    }
+
+    public function test_APublishThatFailsMarksItsSpanAsAnError(): void
+    {
+        $this->storeSampleEvents(subjects: ['waits for the broker']);
+        $this->captureTelemetry();
+
+        try {
+            $this->relay(connections: $this->rabbitMqOnPort(port: self::UNUSED_PORT))
+                ->relayBatch();
+        } catch (Throwable) {
+        }
+
+        $publishSpan = $this->capturedSpan(name: 'publish ' . SampleEventMessages::EXCHANGE);
+        $statusCode = $publishSpan->getStatus()
+            ->getCode();
+        $publishedCount = $this->capturedValue(
+            metricName: 'outbox.published',
+            attributes: ['messaging.rabbitmq.destination.routing_key' => SampleEventMessages::ROUTING_KEY],
+        );
+
+        self::assertSame(StatusCode::STATUS_ERROR, $statusCode);
+        self::assertNull($publishedCount);
     }
 
     public function test_AnEmptyOutboxPublishesNothing(): void
@@ -223,6 +290,7 @@ final class OutboxRelayTest extends LaravelTestCase
             connection: $this->app->make(ConnectionInterface::class),
             publisher: $publisher,
             clock: new FrozenClock(frozenAt: $publishedAt),
+            telemetry: $this->app->make(Telemetry::class),
             batchSize: $batchSize,
         );
     }

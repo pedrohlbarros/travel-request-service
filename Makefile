@@ -15,6 +15,12 @@ FORWARD_RABBITMQ_UI_PORT  ?= 15672
 FORWARD_MAILPIT_SMTP_PORT ?= 1025
 FORWARD_MAILPIT_UI_PORT   ?= 8025
 FORWARD_REVERB_PORT       ?= 8080
+FORWARD_GRAFANA_PORT      ?= 3000
+FORWARD_JAEGER_UI_PORT    ?= 16686
+FORWARD_PROMETHEUS_PORT   ?= 9090
+FORWARD_LOKI_PORT         ?= 3100
+
+OBS_SERVICES := otel-collector jaeger prometheus loki grafana
 
 SERVICES := app outbox-relay notification-consumer reverb mysql redis rabbitmq mailpit
 
@@ -141,6 +147,23 @@ reverb-logs: ## Follow the Reverb server logs (runs with --debug)
 mailpit: ## Print the Mailpit web UI URL
 	@echo "Mailpit: http://localhost:$(FORWARD_MAILPIT_UI_PORT)"
 
+##@ Observability
+
+.PHONY: obs obs-down obs-urls
+obs: ## Start the obs profile (Collector, Jaeger, Prometheus, Loki, Grafana) and turn tracing on in app, relay and consumer
+	OTEL_SDK_DISABLED=false $(COMPOSE) --profile obs up -d --wait
+	@$(MAKE) --no-print-directory obs-urls
+
+obs-down: ## Stop the obs profile and turn tracing off again
+	$(COMPOSE) --profile obs rm -sf $(OBS_SERVICES)
+	OTEL_SDK_DISABLED=true $(COMPOSE) up -d --wait
+
+obs-urls: ## Print the URLs of Grafana, Jaeger, Prometheus and Loki
+	@echo "Grafana:    http://localhost:$(FORWARD_GRAFANA_PORT)  (dashboard Travel Request Service; admin login in .env)"
+	@echo "Jaeger:     http://localhost:$(FORWARD_JAEGER_UI_PORT)"
+	@echo "Prometheus: http://localhost:$(FORWARD_PROMETHEUS_PORT)"
+	@echo "Loki:       http://localhost:$(FORWARD_LOKI_PORT)/ready"
+
 ##@ Quality
 
 .PHONY: lint lint-fix stan arch qa
@@ -189,7 +212,7 @@ infection: ## Mutation testing on Domain + Application (MSI and covered MSI at 1
 
 ##@ Not implemented yet
 
-.PHONY: load-smoke load-load load-stress load-concurrency obs web
+.PHONY: load-smoke load-load load-stress load-concurrency web
 load-smoke: ## Load test: smoke (1 VU) (not implemented yet)
 	@echo "make $@: not implemented yet"
 
@@ -200,9 +223,6 @@ load-stress: ## Load test: ramp until it breaks (not implemented yet)
 	@echo "make $@: not implemented yet"
 
 load-concurrency: ## Load test: concurrent approve/cancel on the same request (not implemented yet)
-	@echo "make $@: not implemented yet"
-
-obs: ## Start the observability profile (not implemented yet)
 	@echo "make $@: not implemented yet"
 
 web: ## Start the optional frontend profile (not implemented yet)

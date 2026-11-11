@@ -1,6 +1,6 @@
 # 0010 — Observabilidade
 
-- **Status:** Aceito
+- **Status:** Aceito (detalhes e o Loki no perfil `obs` em [0038](0038-detalhes-da-observabilidade.md))
 - **Data:** 2026-11-09
 
 ## Decisão

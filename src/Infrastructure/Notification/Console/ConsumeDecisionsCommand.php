@@ -9,6 +9,7 @@ use Infrastructure\Notification\Messaging\DecisionConsumerSettings;
 use Infrastructure\Notification\Messaging\DecisionMessageHandler;
 use Infrastructure\Notification\Messaging\DecisionTopology;
 use Infrastructure\Shared\Messaging\RabbitMqConnectionFactory;
+use Infrastructure\Shared\Observability\Telemetry;
 use PhpAmqpLib\Exception\AMQPTimeoutException;
 use PhpAmqpLib\Message\AMQPMessage;
 
@@ -24,6 +25,7 @@ final class ConsumeDecisionsCommand extends Command
         RabbitMqConnectionFactory $connections,
         DecisionConsumerSettings $settings,
         DecisionMessageHandler $handler,
+        Telemetry $telemetry,
     ): int {
         $connection = $connections->create();
         $channel = $connection->channel();
@@ -55,6 +57,8 @@ final class ConsumeDecisionsCommand extends Command
                 if ($this->option('stop-when-empty') === true) {
                     break;
                 }
+            } finally {
+                $telemetry->flush();
             }
         }
 

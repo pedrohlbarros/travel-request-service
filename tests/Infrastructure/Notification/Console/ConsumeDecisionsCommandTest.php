@@ -12,15 +12,24 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Infrastructure\Notification\Messaging\DecisionMessageHandler;
 use Infrastructure\Notification\Persistence\DatabaseProcessedEvents;
 use Infrastructure\Notification\Persistence\NotificationRows;
+use OpenTelemetry\API\Trace\SpanKind;
 use Tests\Support\LaravelTestCase;
 use Tests\Support\Notification\Fixture\UsesDecisionQueues;
+use Tests\Support\Shared\Observability\CapturesTelemetry;
 
 final class ConsumeDecisionsCommandTest extends LaravelTestCase
 {
+    use CapturesTelemetry;
     use RefreshDatabase;
     use UsesDecisionQueues;
 
     private const string ONE_SHORT_RETRY = '100';
+
+    private const string TRACEPARENT = '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01';
+
+    private const string TRACE_ID = '4bf92f3577b34da6a3ce929d0e0e4736';
+
+    private const string PARENT_SPAN_ID = '00f067aa0ba902b7';
 
     private const string LONG_RETRY = '60000';
 
@@ -42,6 +51,7 @@ final class ConsumeDecisionsCommandTest extends LaravelTestCase
     protected function tearDown(): void
     {
         $this->closeDecisionQueues();
+        $this->releaseTelemetry();
         parent::tearDown();
     }
 
@@ -58,6 +68,54 @@ final class ConsumeDecisionsCommandTest extends LaravelTestCase
         self::assertSame(1, $this->rowsIn(table: DatabaseProcessedEvents::TABLE));
         self::assertSame([], $this->messagesIn(queue: $mainQueue));
         self::assertSame([], $this->deadLetters());
+    }
+
+    public function test_TheDeliveryContinuesTheTraceTheMessageCarries(): void
+    {
+        $this->captureTelemetry();
+        $this->publishApproval(headers: [
+            'traceparent' => self::TRACEPARENT,
+            DecisionMessageHandler::REQUEST_ID_HEADER => 'request-id-of-the-decision',
+        ]);
+
+        $this->consumeUntilEmpty();
+
+        $consumeSpan = $this->capturedSpan(name: 'process ' . $this->decisionSettings()->queue);
+        $deliverSpan = $this->capturedSpan(name: 'notification.deliver');
+        $durations = $this->capturedPoints(metricName: 'notification.delivery.duration');
+
+        self::assertSame(SpanKind::KIND_CONSUMER, $consumeSpan->getKind());
+        self::assertSame(self::TRACE_ID, $consumeSpan->getTraceId());
+        self::assertSame(self::PARENT_SPAN_ID, $consumeSpan->getParentSpanId());
+        self::assertSame($consumeSpan->getSpanId(), $deliverSpan->getParentSpanId());
+        self::assertSame(
+            1,
+            $this->capturedValue(metricName: 'notification.deliveries', attributes: ['outcome' => 'delivered']),
+        );
+        self::assertCount(1, $durations);
+    }
+
+    public function test_EveryOutcomeIsCounted(): void
+    {
+        $this->captureTelemetry();
+        $this->publishApproval();
+        $this->publishApproval();
+        $this->publishDecision(body: '{not json');
+
+        $this->consumeUntilEmpty();
+
+        self::assertSame(
+            1,
+            $this->capturedValue(metricName: 'notification.deliveries', attributes: ['outcome' => 'delivered']),
+        );
+        self::assertSame(
+            1,
+            $this->capturedValue(metricName: 'notification.deliveries', attributes: ['outcome' => 'duplicate']),
+        );
+        self::assertSame(
+            1,
+            $this->capturedValue(metricName: 'notification.deliveries', attributes: ['outcome' => 'dead_lettered']),
+        );
     }
 
     public function test_ARedeliveredDecisionNotifiesOnlyOnce(): void

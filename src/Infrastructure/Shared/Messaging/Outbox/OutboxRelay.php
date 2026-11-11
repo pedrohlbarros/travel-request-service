@@ -8,6 +8,8 @@ use Application\Shared\Port\Clock;
 use DateTimeZone;
 use Illuminate\Database\ConnectionInterface;
 use Infrastructure\Shared\Messaging\RabbitMq\RabbitMqOutboxPublisher;
+use Infrastructure\Shared\Observability\Telemetry;
+use Throwable;
 
 /**
  * One batch per call. Rows stay locked until the broker confirms them, and other relays skip what is locked,
@@ -23,6 +25,7 @@ final readonly class OutboxRelay
         private ConnectionInterface $connection,
         private RabbitMqOutboxPublisher $publisher,
         private Clock $clock,
+        private Telemetry $telemetry,
         private int $batchSize,
     ) {}
 
@@ -48,11 +51,35 @@ final readonly class OutboxRelay
                 return 0;
             }
 
-            $this->publisher->publish(messages: $messages);
+            $batch = TracedOutboxBatch::start(telemetry: $this->telemetry, messages: $messages);
+
+            try {
+                $this->publisher->publish(messages: $batch->messages);
+            } catch (Throwable $failure) {
+                $batch->fail(failure: $failure);
+
+                throw $failure;
+            }
+
             $this->markPublished(messages: $messages);
+            $batch->succeed();
+            $this->countPublished(messages: $messages);
 
             return \count($messages);
         });
+    }
+
+    /**
+     * @param list<PendingOutboxMessage> $messages
+     */
+    private function countPublished(array $messages): void
+    {
+        $published = $this->telemetry->meter()
+            ->createCounter('outbox.published', '{message}', 'Outbox messages the broker confirmed.');
+
+        foreach ($messages as $message) {
+            $published->add(1, ['messaging.rabbitmq.destination.routing_key' => $message->routingKey]);
+        }
     }
 
     /**

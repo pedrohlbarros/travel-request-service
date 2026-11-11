@@ -6,6 +6,7 @@ namespace Infrastructure\Notification\Delivery;
 
 use Application\Notification\Port\DecisionNotifier;
 use Domain\Notification\ValueObject\TravelRequestDecision;
+use Infrastructure\Shared\Observability\Telemetry;
 
 final readonly class LaravelDecisionNotifier implements DecisionNotifier
 {
@@ -13,6 +14,7 @@ final readonly class LaravelDecisionNotifier implements DecisionNotifier
 
     public function __construct(
         private DecisionTextsFactory $texts,
+        private Telemetry $telemetry,
     ) {}
 
     public function notify(TravelRequestDecision $decision): void
@@ -21,6 +23,12 @@ final readonly class LaravelDecisionNotifier implements DecisionNotifier
         $texts = $this->texts->for(decision: $decision);
         $notification = new TravelRequestDecidedNotification(decision: $decision, texts: $texts);
 
-        $notifiable->notifyNow(instance: $notification, channels: self::DURABLE_CHANNELS);
+        $this->telemetry->inSpan(
+            name: 'notification.deliver',
+            work: static function () use ($notifiable, $notification): void {
+                $notifiable->notifyNow(instance: $notification, channels: self::DURABLE_CHANNELS);
+            },
+            attributes: ['notification.channels' => 'database,mail', 'messaging.message.id' => $decision->eventId->value],
+        );
     }
 }

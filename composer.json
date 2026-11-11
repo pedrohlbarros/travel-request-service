@@ -12,10 +12,14 @@
         "ext-sockets": "*",
         "ext-swoole": "*",
         "dedoc/scramble": "^0.13.53",
+        "google/protobuf": "^5.36",
         "laravel/framework": "^13.40",
         "laravel/octane": "^2.23",
         "laravel/reverb": "^1.13",
         "lcobucci/jwt": "^5.6",
+        "open-telemetry/exporter-otlp": "^1.5",
+        "open-telemetry/opentelemetry-auto-laravel": "^1.10",
+        "open-telemetry/sdk": "^1.16",
         "php-amqplib/php-amqplib": "^3.7"
     },
     "require-dev": {
@@ -39,7 +43,10 @@
             "Application\\": "src/Application/",
             "Infrastructure\\": "src/Infrastructure/",
             "Interfaces\\": "src/Interfaces/"
-        }
+        },
+        "files": [
+            "bootstrap/telemetry.php"
+        ]
     },
     "autoload-dev": {
         "psr-4": {
@@ -67,7 +74,8 @@
         "sort-packages": true,
         "allow-plugins": {
             "infection/extension-installer": true,
-            "php-http/discovery": true
+            "php-http/discovery": true,
+            "tbachert/spi": true
         }
     },
     "minimum-stability": "stable",
