@@ -1,0 +1,1873 @@
+{
+    "openapi": "3.1.2",
+    "info": {
+        "title": "Travel Request Service API",
+        "version": "1.0.0",
+        "description": "Corporate travel requests: create, list, edit and decide, with JWT authentication. Errors are RFC 9457 problem details; writes need the ETag of the resource in If-Match."
+    },
+    "servers": [
+        {
+            "url": "http://localhost:8000/api/v1"
+        }
+    ],
+    "security": [
+        {
+            "http": []
+        }
+    ],
+    "paths": {
+        "/travel-requests/{travelRequestId}/approve": {
+            "post": {
+                "operationId": "controller.approveTravelRequest",
+                "summary": "Admins only; a request can only be approved while it is still requested",
+                "tags": [
+                    "ApproveTravelRequest"
+                ],
+                "parameters": [
+                    {
+                        "name": "travelRequestId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "If-Match",
+                        "in": "header",
+                        "required": true,
+                        "description": "ETag of the version the change is based on. Anything else than the current one fails with 412.",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "\"3\""
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`TravelRequestResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/TravelRequestResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        },
+                        "headers": {
+                            "ETag": {
+                                "description": "Current version of the resource, for the If-Match of the next write.",
+                                "schema": {
+                                    "type": "string"
+                                },
+                                "example": "\"3\""
+                            }
+                        }
+                    },
+                    "412": {
+                        "$ref": "#/components/responses/TravelRequestVersionMismatch"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/InvalidStatusTransition"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/InvalidIdentifier"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "428": {
+                        "description": "The request must be conditional.",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "type": {
+                                            "type": "string",
+                                            "const": "/problems/precondition-required"
+                                        },
+                                        "title": {
+                                            "type": "string",
+                                            "const": "The request must be conditional."
+                                        },
+                                        "status": {
+                                            "type": "integer",
+                                            "const": 428
+                                        },
+                                        "detail": {
+                                            "type": "string"
+                                        },
+                                        "instance": {
+                                            "type": "string"
+                                        },
+                                        "request_id": {
+                                            "type": "string"
+                                        },
+                                        "trace_id": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "type",
+                                        "title",
+                                        "status",
+                                        "detail",
+                                        "instance",
+                                        "request_id",
+                                        "trace_id"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/travel-requests/{travelRequestId}/cancel": {
+            "post": {
+                "operationId": "controller.cancelTravelRequest",
+                "summary": "Admins only; an approved request can no longer be cancelled",
+                "tags": [
+                    "CancelTravelRequest"
+                ],
+                "parameters": [
+                    {
+                        "name": "travelRequestId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "If-Match",
+                        "in": "header",
+                        "required": true,
+                        "description": "ETag of the version the change is based on. Anything else than the current one fails with 412.",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "\"3\""
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`TravelRequestResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/TravelRequestResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        },
+                        "headers": {
+                            "ETag": {
+                                "description": "Current version of the resource, for the If-Match of the next write.",
+                                "schema": {
+                                    "type": "string"
+                                },
+                                "example": "\"3\""
+                            }
+                        }
+                    },
+                    "412": {
+                        "$ref": "#/components/responses/TravelRequestVersionMismatch"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/InvalidStatusTransition"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/InvalidIdentifier"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "428": {
+                        "description": "The request must be conditional.",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "type": {
+                                            "type": "string",
+                                            "const": "/problems/precondition-required"
+                                        },
+                                        "title": {
+                                            "type": "string",
+                                            "const": "The request must be conditional."
+                                        },
+                                        "status": {
+                                            "type": "integer",
+                                            "const": 428
+                                        },
+                                        "detail": {
+                                            "type": "string"
+                                        },
+                                        "instance": {
+                                            "type": "string"
+                                        },
+                                        "request_id": {
+                                            "type": "string"
+                                        },
+                                        "trace_id": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "type",
+                                        "title",
+                                        "status",
+                                        "detail",
+                                        "instance",
+                                        "request_id",
+                                        "trace_id"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/travel-requests/{travelRequestId}": {
+            "patch": {
+                "operationId": "controller.changeTravelRequestDetails",
+                "summary": "Only the requester edits, and only while the request is still requested",
+                "tags": [
+                    "ChangeTravelRequestDetails"
+                ],
+                "parameters": [
+                    {
+                        "name": "travelRequestId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "If-Match",
+                        "in": "header",
+                        "required": true,
+                        "description": "ETag of the version the change is based on. Anything else than the current one fails with 412.",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "\"3\""
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ChangeTravelRequestDetailsRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`TravelRequestResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/TravelRequestResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        },
+                        "headers": {
+                            "ETag": {
+                                "description": "Current version of the resource, for the If-Match of the next write.",
+                                "schema": {
+                                    "type": "string"
+                                },
+                                "example": "\"3\""
+                            }
+                        }
+                    },
+                    "412": {
+                        "$ref": "#/components/responses/TravelRequestVersionMismatch"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/TravelRequestNotEditable"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/TravelRequestNotOwned"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "428": {
+                        "description": "The request must be conditional.",
+                        "content": {
+                            "application/problem+json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "type": {
+                                            "type": "string",
+                                            "const": "/problems/precondition-required"
+                                        },
+                                        "title": {
+                                            "type": "string",
+                                            "const": "The request must be conditional."
+                                        },
+                                        "status": {
+                                            "type": "integer",
+                                            "const": 428
+                                        },
+                                        "detail": {
+                                            "type": "string"
+                                        },
+                                        "instance": {
+                                            "type": "string"
+                                        },
+                                        "request_id": {
+                                            "type": "string"
+                                        },
+                                        "trace_id": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "type",
+                                        "title",
+                                        "status",
+                                        "detail",
+                                        "instance",
+                                        "request_id",
+                                        "trace_id"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "get": {
+                "operationId": "travel-requests.show",
+                "summary": "Someone else's request answers 404, as if it did not exist; admins see any request",
+                "tags": [
+                    "ShowTravelRequest"
+                ],
+                "parameters": [
+                    {
+                        "name": "travelRequestId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`TravelRequestResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/TravelRequestResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        },
+                        "headers": {
+                            "ETag": {
+                                "description": "Current version of the resource, for the If-Match of the next write.",
+                                "schema": {
+                                    "type": "string"
+                                },
+                                "example": "\"3\""
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/InvalidIdentifier"
+                    }
+                }
+            }
+        },
+        "/travel-requests": {
+            "post": {
+                "operationId": "controller.createTravelRequest",
+                "tags": [
+                    "CreateTravelRequest"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateTravelRequestRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "`TravelRequestResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/TravelRequestResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        },
+                        "headers": {
+                            "ETag": {
+                                "description": "Current version of the resource, for the If-Match of the next write.",
+                                "schema": {
+                                    "type": "string"
+                                },
+                                "example": "\"3\""
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/InvalidIdentifier"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            },
+            "get": {
+                "operationId": "controller.listTravelRequests",
+                "summary": "Admins see everyone's requests; anyone else only their own. Newest first",
+                "tags": [
+                    "ListTravelRequests"
+                ],
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "destination",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 120
+                        }
+                    },
+                    {
+                        "name": "created_from",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "created_to",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "travel_from",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "travel_to",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "cursor",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 100
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`TravelRequestPageResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TravelRequestPageResource"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/InvalidIdentifier"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/notifications": {
+            "get": {
+                "operationId": "controller.listNotifications",
+                "summary": "The caller's own notifications, newest first; admins included",
+                "tags": [
+                    "ListNotifications"
+                ],
+                "parameters": [
+                    {
+                        "name": "unread",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "true",
+                                "false",
+                                "1",
+                                "0"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "cursor",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 100
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`NotificationPageResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotificationPageResource"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/InvalidIdentifier"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/auth/login": {
+            "post": {
+                "operationId": "controller.login",
+                "tags": [
+                    "Login"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/LoginRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`TokenPairResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TokenPairResource"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/InvalidCredentials"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                },
+                "security": []
+            }
+        },
+        "/auth/logout": {
+            "post": {
+                "operationId": "controller.logout",
+                "tags": [
+                    "Logout"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RefreshTokenRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/notifications/{notificationId}/read": {
+            "post": {
+                "operationId": "controller.markNotificationRead",
+                "summary": "Reading twice keeps the first read time. Someone else's notification is reported as missing",
+                "tags": [
+                    "MarkNotificationRead"
+                ],
+                "parameters": [
+                    {
+                        "name": "notificationId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`NotificationResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotificationResource"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/InvalidIdentifier"
+                    }
+                }
+            }
+        },
+        "/auth/me": {
+            "get": {
+                "operationId": "controller.me",
+                "tags": [
+                    "Me"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`UserResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/UserResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/UserNotFound"
+                    }
+                }
+            }
+        },
+        "/auth/refresh": {
+            "post": {
+                "operationId": "controller.refreshToken",
+                "tags": [
+                    "RefreshToken"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RefreshTokenRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`TokenPairResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TokenPairResource"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/InvalidRefreshToken"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                },
+                "security": []
+            }
+        },
+        "/auth/register": {
+            "post": {
+                "operationId": "controller.register",
+                "tags": [
+                    "Register"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RegisterRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "`UserResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/UserResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/EmailAlreadyRegistered"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                },
+                "security": []
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "http": {
+                "type": "http",
+                "scheme": "bearer"
+            }
+        },
+        "schemas": {
+            "ChangeTravelRequestDetailsRequest": {
+                "type": "object",
+                "description": "Partial update: only the fields sent are changed, and at least one must be sent.",
+                "properties": {
+                    "destination": {
+                        "type": "string",
+                        "minLength": 2,
+                        "maxLength": 120
+                    },
+                    "departure_date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "return_date": {
+                        "type": "string",
+                        "format": "date"
+                    }
+                },
+                "title": "ChangeTravelRequestDetailsRequest"
+            },
+            "CreateTravelRequestRequest": {
+                "type": "object",
+                "properties": {
+                    "destination": {
+                        "type": "string",
+                        "minLength": 2,
+                        "maxLength": 120
+                    },
+                    "departure_date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "return_date": {
+                        "type": "string",
+                        "format": "date"
+                    }
+                },
+                "required": [
+                    "destination",
+                    "departure_date",
+                    "return_date"
+                ],
+                "title": "CreateTravelRequestRequest"
+            },
+            "LoginRequest": {
+                "type": "object",
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "maxLength": 254
+                    },
+                    "password": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "email",
+                    "password"
+                ],
+                "title": "LoginRequest"
+            },
+            "NotificationPageResource": {
+                "type": "object",
+                "properties": {
+                    "data": {
+                        "type": "array",
+                        "items": {}
+                    },
+                    "meta": {
+                        "type": "object",
+                        "properties": {
+                            "per_page": {
+                                "type": "integer",
+                                "minimum": 1
+                            },
+                            "next_cursor": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "prev_cursor": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "per_page",
+                            "next_cursor",
+                            "prev_cursor"
+                        ]
+                    },
+                    "links": {
+                        "type": "object",
+                        "properties": {
+                            "next": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "prev": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "next",
+                            "prev"
+                        ]
+                    }
+                },
+                "required": [
+                    "data",
+                    "meta",
+                    "links"
+                ],
+                "title": "NotificationPageResource"
+            },
+            "NotificationResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "type": {
+                        "type": "string"
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "data": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    },
+                    "read_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "created_at": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "type",
+                    "message",
+                    "data",
+                    "read_at",
+                    "created_at"
+                ],
+                "title": "NotificationResource"
+            },
+            "RefreshTokenRequest": {
+                "type": "object",
+                "properties": {
+                    "refresh_token": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "refresh_token"
+                ],
+                "title": "RefreshTokenRequest"
+            },
+            "RegisterRequest": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 2,
+                        "maxLength": 120
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "maxLength": 254
+                    },
+                    "password": {
+                        "type": "string",
+                        "minLength": 8,
+                        "maxLength": 72
+                    }
+                },
+                "required": [
+                    "name",
+                    "email",
+                    "password"
+                ],
+                "title": "RegisterRequest"
+            },
+            "TokenPairResource": {
+                "type": "object",
+                "properties": {
+                    "access_token": {
+                        "type": "string"
+                    },
+                    "token_type": {
+                        "type": "string",
+                        "const": "Bearer"
+                    },
+                    "expires_in": {
+                        "type": "integer"
+                    },
+                    "refresh_token": {
+                        "type": "string"
+                    },
+                    "refresh_expires_in": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "access_token",
+                    "token_type",
+                    "expires_in",
+                    "refresh_token",
+                    "refresh_expires_in"
+                ],
+                "title": "TokenPairResource"
+            },
+            "TravelRequestPageResource": {
+                "type": "object",
+                "properties": {
+                    "data": {
+                        "type": "array",
+                        "items": {}
+                    },
+                    "meta": {
+                        "type": "object",
+                        "properties": {
+                            "per_page": {
+                                "type": "integer",
+                                "minimum": 1
+                            },
+                            "next_cursor": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "prev_cursor": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "per_page",
+                            "next_cursor",
+                            "prev_cursor"
+                        ]
+                    },
+                    "links": {
+                        "type": "object",
+                        "properties": {
+                            "next": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "prev": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "next",
+                            "prev"
+                        ]
+                    }
+                },
+                "required": [
+                    "data",
+                    "meta",
+                    "links"
+                ],
+                "title": "TravelRequestPageResource"
+            },
+            "TravelRequestResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "requester": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "string"
+                            },
+                            "name": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "name"
+                        ]
+                    },
+                    "destination": {
+                        "type": "string"
+                    },
+                    "departure_date": {
+                        "type": "string"
+                    },
+                    "return_date": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "requested",
+                            "approved",
+                            "cancelled"
+                        ]
+                    },
+                    "version": {
+                        "type": "integer"
+                    },
+                    "decided_by": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "string"
+                            },
+                            "name": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "name"
+                        ]
+                    },
+                    "created_at": {
+                        "type": "string"
+                    },
+                    "updated_at": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "requester",
+                    "destination",
+                    "departure_date",
+                    "return_date",
+                    "status",
+                    "version",
+                    "decided_by",
+                    "created_at",
+                    "updated_at"
+                ],
+                "title": "TravelRequestResource"
+            },
+            "UserResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "email": {
+                        "type": "string"
+                    },
+                    "role": {
+                        "type": "string",
+                        "enum": [
+                            "user",
+                            "admin"
+                        ]
+                    },
+                    "created_at": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "name",
+                    "email",
+                    "role",
+                    "created_at"
+                ],
+                "title": "UserResource"
+            }
+        },
+        "responses": {
+            "EmailAlreadyRegistered": {
+                "description": "The email is already registered.",
+                "content": {
+                    "application/problem+json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "type": {
+                                    "type": "string",
+                                    "const": "/problems/email-already-registered"
+                                },
+                                "title": {
+                                    "type": "string",
+                                    "const": "The email is already registered."
+                                },
+                                "status": {
+                                    "type": "integer",
+                                    "const": 409
+                                },
+                                "detail": {
+                                    "type": "string"
+                                },
+                                "instance": {
+                                    "type": "string"
+                                },
+                                "request_id": {
+                                    "type": "string"
+                                },
+                                "trace_id": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "type",
+                                "title",
+                                "status",
+                                "detail",
+                                "instance",
+                                "request_id",
+                                "trace_id"
+                            ]
+                        }
+                    }
+                }
+            },
+            "ValidationException": {
+                "description": "The request is invalid.",
+                "content": {
+                    "application/problem+json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "type": {
+                                    "type": "string",
+                                    "const": "/problems/validation-failed"
+                                },
+                                "title": {
+                                    "type": "string",
+                                    "const": "The request is invalid."
+                                },
+                                "status": {
+                                    "type": "integer",
+                                    "const": 422
+                                },
+                                "detail": {
+                                    "type": "string"
+                                },
+                                "instance": {
+                                    "type": "string"
+                                },
+                                "request_id": {
+                                    "type": "string"
+                                },
+                                "trace_id": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ]
+                                },
+                                "errors": {
+                                    "type": "object",
+                                    "description": "Messages per invalid field.",
+                                    "additionalProperties": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            },
+                            "required": [
+                                "type",
+                                "title",
+                                "status",
+                                "detail",
+                                "instance",
+                                "request_id",
+                                "trace_id",
+                                "errors"
+                            ]
+                        }
+                    }
+                }
+            },
+            "InvalidCredentials": {
+                "description": "The email or password is incorrect.",
+                "content": {
+                    "application/problem+json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "type": {
+                                    "type": "string",
+                                    "const": "/problems/invalid-credentials"
+                                },
+                                "title": {
+                                    "type": "string",
+                                    "const": "The email or password is incorrect."
+                                },
+                                "status": {
+                                    "type": "integer",
+                                    "const": 401
+                                },
+                                "detail": {
+                                    "type": "string"
+                                },
+                                "instance": {
+                                    "type": "string"
+                                },
+                                "request_id": {
+                                    "type": "string"
+                                },
+                                "trace_id": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "type",
+                                "title",
+                                "status",
+                                "detail",
+                                "instance",
+                                "request_id",
+                                "trace_id"
+                            ]
+                        }
+                    }
+                }
+            },
+            "InvalidRefreshToken": {
+                "description": "The refresh token is not valid.",
+                "content": {
+                    "application/problem+json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "type": {
+                                    "type": "string",
+                                    "const": "/problems/invalid-refresh-token"
+                                },
+                                "title": {
+                                    "type": "string",
+                                    "const": "The refresh token is not valid."
+                                },
+                                "status": {
+                                    "type": "integer",
+                                    "const": 401
+                                },
+                                "detail": {
+                                    "type": "string"
+                                },
+                                "instance": {
+                                    "type": "string"
+                                },
+                                "request_id": {
+                                    "type": "string"
+                                },
+                                "trace_id": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "type",
+                                "title",
+                                "status",
+                                "detail",
+                                "instance",
+                                "request_id",
+                                "trace_id"
+                            ]
+                        }
+                    }
+                }
+            },
+            "AuthenticationException": {
+                "description": "Authentication is required.",
+                "content": {
+                    "application/problem+json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "type": {
+                                    "type": "string",
+                                    "const": "/problems/unauthenticated"
+                                },
+                                "title": {
+                                    "type": "string",
+                                    "const": "Authentication is required."
+                                },
+                                "status": {
+                                    "type": "integer",
+                                    "const": 401
+                                },
+                                "detail": {
+                                    "type": "string"
+                                },
+                                "instance": {
+                                    "type": "string"
+                                },
+                                "request_id": {
+                                    "type": "string"
+                                },
+                                "trace_id": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "type",
+                                "title",
+                                "status",
+                                "detail",
+                                "instance",
+                                "request_id",
+                                "trace_id"
+                            ]
+                        }
+                    }
+                }
+            },
+            "InvalidIdentifier": {
+                "description": "The resource was not found.",
+                "content": {
+                    "application/problem+json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "type": {
+                                    "type": "string",
+                                    "const": "/problems/not-found"
+                                },
+                                "title": {
+                                    "type": "string",
+                                    "const": "The resource was not found."
+                                },
+                                "status": {
+                                    "type": "integer",
+                                    "const": 404
+                                },
+                                "detail": {
+                                    "type": "string"
+                                },
+                                "instance": {
+                                    "type": "string"
+                                },
+                                "request_id": {
+                                    "type": "string"
+                                },
+                                "trace_id": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "type",
+                                "title",
+                                "status",
+                                "detail",
+                                "instance",
+                                "request_id",
+                                "trace_id"
+                            ]
+                        }
+                    }
+                }
+            },
+            "UserNotFound": {
+                "description": "The resource was not found.",
+                "content": {
+                    "application/problem+json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "type": {
+                                    "type": "string",
+                                    "const": "/problems/not-found"
+                                },
+                                "title": {
+                                    "type": "string",
+                                    "const": "The resource was not found."
+                                },
+                                "status": {
+                                    "type": "integer",
+                                    "const": 404
+                                },
+                                "detail": {
+                                    "type": "string"
+                                },
+                                "instance": {
+                                    "type": "string"
+                                },
+                                "request_id": {
+                                    "type": "string"
+                                },
+                                "trace_id": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "type",
+                                "title",
+                                "status",
+                                "detail",
+                                "instance",
+                                "request_id",
+                                "trace_id"
+                            ]
+                        }
+                    }
+                }
+            },
+            "TravelRequestVersionMismatch": {
+                "description": "The travel request changed since it was read.",
+                "content": {
+                    "application/problem+json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "type": {
+                                    "type": "string",
+                                    "const": "/problems/version-mismatch"
+                                },
+                                "title": {
+                                    "type": "string",
+                                    "const": "The travel request changed since it was read."
+                                },
+                                "status": {
+                                    "type": "integer",
+                                    "const": 412
+                                },
+                                "detail": {
+                                    "type": "string"
+                                },
+                                "instance": {
+                                    "type": "string"
+                                },
+                                "request_id": {
+                                    "type": "string"
+                                },
+                                "trace_id": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "type",
+                                "title",
+                                "status",
+                                "detail",
+                                "instance",
+                                "request_id",
+                                "trace_id"
+                            ]
+                        }
+                    }
+                }
+            },
+            "TravelRequestNotEditable": {
+                "description": "The travel request can no longer be edited.",
+                "content": {
+                    "application/problem+json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "type": {
+                                    "type": "string",
+                                    "const": "/problems/travel-request-not-editable"
+                                },
+                                "title": {
+                                    "type": "string",
+                                    "const": "The travel request can no longer be edited."
+                                },
+                                "status": {
+                                    "type": "integer",
+                                    "const": 409
+                                },
+                                "detail": {
+                                    "type": "string"
+                                },
+                                "instance": {
+                                    "type": "string"
+                                },
+                                "request_id": {
+                                    "type": "string"
+                                },
+                                "trace_id": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "type",
+                                "title",
+                                "status",
+                                "detail",
+                                "instance",
+                                "request_id",
+                                "trace_id"
+                            ]
+                        }
+                    }
+                }
+            },
+            "TravelRequestNotOwned": {
+                "description": "The resource was not found.",
+                "content": {
+                    "application/problem+json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "type": {
+                                    "type": "string",
+                                    "const": "/problems/not-found"
+                                },
+                                "title": {
+                                    "type": "string",
+                                    "const": "The resource was not found."
+                                },
+                                "status": {
+                                    "type": "integer",
+                                    "const": 404
+                                },
+                                "detail": {
+                                    "type": "string"
+                                },
+                                "instance": {
+                                    "type": "string"
+                                },
+                                "request_id": {
+                                    "type": "string"
+                                },
+                                "trace_id": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "type",
+                                "title",
+                                "status",
+                                "detail",
+                                "instance",
+                                "request_id",
+                                "trace_id"
+                            ]
+                        }
+                    }
+                }
+            },
+            "InvalidStatusTransition": {
+                "description": "The travel request cannot move to that status.",
+                "content": {
+                    "application/problem+json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "type": {
+                                    "type": "string",
+                                    "const": "/problems/invalid-status-transition"
+                                },
+                                "title": {
+                                    "type": "string",
+                                    "const": "The travel request cannot move to that status."
+                                },
+                                "status": {
+                                    "type": "integer",
+                                    "const": 409
+                                },
+                                "detail": {
+                                    "type": "string"
+                                },
+                                "instance": {
+                                    "type": "string"
+                                },
+                                "request_id": {
+                                    "type": "string"
+                                },
+                                "trace_id": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "type",
+                                "title",
+                                "status",
+                                "detail",
+                                "instance",
+                                "request_id",
+                                "trace_id"
+                            ]
+                        }
+                    }
+                }
+            },
+            "AuthorizationException": {
+                "description": "You are not allowed to do this.",
+                "content": {
+                    "application/problem+json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "type": {
+                                    "type": "string",
+                                    "const": "/problems/forbidden"
+                                },
+                                "title": {
+                                    "type": "string",
+                                    "const": "You are not allowed to do this."
+                                },
+                                "status": {
+                                    "type": "integer",
+                                    "const": 403
+                                },
+                                "detail": {
+                                    "type": "string"
+                                },
+                                "instance": {
+                                    "type": "string"
+                                },
+                                "request_id": {
+                                    "type": "string"
+                                },
+                                "trace_id": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "type",
+                                "title",
+                                "status",
+                                "detail",
+                                "instance",
+                                "request_id",
+                                "trace_id"
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
