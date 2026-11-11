@@ -24,8 +24,16 @@ final class ProblemTypeRegistry
 
     public function find(Throwable $exception): ?ProblemType
     {
-        foreach ($this->problemTypeByException as $exceptionClass => $problemType) {
-            if ($exception instanceof $exceptionClass) {
+        return $this->findForClass(exceptionClass: $exception::class);
+    }
+
+    /**
+     * @param class-string $exceptionClass
+     */
+    public function findForClass(string $exceptionClass): ?ProblemType
+    {
+        foreach ($this->problemTypeByException as $registeredClass => $problemType) {
+            if (is_a($exceptionClass, $registeredClass, true)) {
                 return $problemType;
             }
         }

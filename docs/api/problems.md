@@ -8,12 +8,12 @@ Todos os erros da API seguem a RFC 9457 (`application/problem+json`) com `type`,
 | 401 | `/problems/invalid-credentials` | Login com e-mail ou senha errados (não diz qual) |
 | 401 | `/problems/invalid-refresh-token` | Refresh token desconhecido, expirado, revogado ou reutilizado (o reuso revoga a família inteira) |
 | 403 | `/problems/forbidden` | Autenticado, mas sem permissão para a ação |
-| 404 | `/problems/not-found` | Recurso inexistente ou de outro usuário |
+| 404 | `/problems/not-found` | Recurso inexistente, de outro usuário ou com ID que não é UUIDv7 |
 | 409 | `/problems/email-already-registered` | Cadastro com e-mail já existente |
 | 409 | `/problems/invalid-status-transition` | Mudança de status não permitida (ex.: cancelar aprovado) |
 | 409 | `/problems/travel-request-not-editable` | Edição de pedido fora de `requested` |
-| 412 | `/problems/version-mismatch` | `If-Match` diferente da versão atual |
-| 422 | `/problems/validation-failed` | Entrada com formato inválido; detalhes em `errors` |
+| 412 | `/problems/version-mismatch` | `If-Match` diferente do ETag atual (`"<version>"`), inclusive weak, `*` ou lista |
+| 422 | `/problems/validation-failed` | Entrada inválida. Com `errors` quando vem da validação do request; sem `errors` (causa no `detail`) quando é regra do domínio contra o valor armazenado ou cursor de listagem inválido |
 | 428 | `/problems/precondition-required` | Escrita sem `If-Match` |
 | 429 | `/problems/too-many-requests` | Rate limit de login/refresh; header `Retry-After` |
 | 500 | `/problems/internal-error` | Erro inesperado, sem detalhe interno |

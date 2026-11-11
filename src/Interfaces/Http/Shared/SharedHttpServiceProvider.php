@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Interfaces\Http\Shared;
 
+use Domain\Shared\Exception\InvalidIdentifier;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
@@ -12,6 +13,7 @@ use Interfaces\Http\Shared\Problem\ProblemType;
 use Interfaces\Http\Shared\Problem\ProblemTypeRegistry;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\HttpKernel\Exception\PreconditionRequiredHttpException;
 
 final class SharedHttpServiceProvider extends ServiceProvider
 {
@@ -41,13 +43,22 @@ final class SharedHttpServiceProvider extends ServiceProvider
         $problemTypes->register(exceptionClass: AuthenticationException::class, problemType: $unauthenticated);
         $problemTypes->register(exceptionClass: AuthorizationException::class, problemType: $forbidden);
         $problemTypes->register(exceptionClass: AccessDeniedHttpException::class, problemType: $forbidden);
+        $notFound = new ProblemType(
+            status: 404,
+            type: '/problems/not-found',
+            title: 'The resource was not found.',
+            isDetailFromException: false,
+        );
+
+        $problemTypes->register(exceptionClass: NotFoundHttpException::class, problemType: $notFound);
+        // Identifiers reach the domain from URL paths, so one that is not even valid names nothing.
+        $problemTypes->register(exceptionClass: InvalidIdentifier::class, problemType: $notFound);
         $problemTypes->register(
-            exceptionClass: NotFoundHttpException::class,
+            exceptionClass: PreconditionRequiredHttpException::class,
             problemType: new ProblemType(
-                status: 404,
-                type: '/problems/not-found',
-                title: 'The resource was not found.',
-                isDetailFromException: false,
+                status: 428,
+                type: '/problems/precondition-required',
+                title: 'The request must be conditional.',
             ),
         );
         $problemTypes->register(
