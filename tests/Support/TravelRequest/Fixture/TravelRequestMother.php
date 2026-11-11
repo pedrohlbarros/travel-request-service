@@ -55,6 +55,16 @@ final class TravelRequestMother
         );
     }
 
+    public static function travelRequestId(): TravelRequestId
+    {
+        return TravelRequestId::fromString(id: self::TRAVEL_REQUEST_ID);
+    }
+
+    public static function destination(): Destination
+    {
+        return Destination::fromString(name: self::DESTINATION);
+    }
+
     public static function userId(string $id): UserId
     {
         return UserId::fromString(id: $id);

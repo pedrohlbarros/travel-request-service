@@ -16,7 +16,7 @@ Nenhuma decisão nova é tomada dentro de uma fase sem aval; o que surgir vira p
 | [01](01-dominio-travel-request.md) | Domínio TravelRequest | Concluído (2026-11-09) |
 | [02](02-identity.md) | Identity | Concluído (2026-11-10) |
 | [03](03-api-pedidos.md) | API de pedidos | Concluído (2026-11-10) |
-| [04](04-mensageria.md) | Mensageria | Proposto |
+| [04](04-mensageria.md) | Mensageria | Concluído (2026-11-10) |
 | [05](05-notification.md) | Notification | Proposto |
 | [06](06-observabilidade.md) | Observabilidade | Proposto |
 | [07](07-carga.md) | Testes de carga | Proposto |

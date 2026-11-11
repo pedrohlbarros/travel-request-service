@@ -51,7 +51,6 @@ final class SharedHttpServiceProvider extends ServiceProvider
         );
 
         $problemTypes->register(exceptionClass: NotFoundHttpException::class, problemType: $notFound);
-        // Identifiers reach the domain from URL paths, so one that is not even valid names nothing.
         $problemTypes->register(exceptionClass: InvalidIdentifier::class, problemType: $notFound);
         $problemTypes->register(
             exceptionClass: PreconditionRequiredHttpException::class,

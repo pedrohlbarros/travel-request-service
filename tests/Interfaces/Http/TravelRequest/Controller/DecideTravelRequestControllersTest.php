@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Interfaces\Http\TravelRequest\Controller;
 
+use Illuminate\Database\ConnectionInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Infrastructure\Shared\Messaging\Outbox\OutboxDomainEventPublisher;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Support\LaravelTestCase;
 use Tests\Support\TravelRequest\CallsTravelRequestApi;
@@ -20,6 +22,8 @@ final class DecideTravelRequestControllersTest extends LaravelTestCase
     private const string APPROVE = '/approve';
 
     private const string CANCEL = '/cancel';
+
+    private const string TRACEPARENT = '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01';
 
     private string $path;
 
@@ -64,6 +68,23 @@ final class DecideTravelRequestControllersTest extends LaravelTestCase
             ->assertJsonPath('data.decided_by', ['id' => $this->adminId, 'name' => self::ADMIN_NAME])
             ->assertJsonPath('data.requester.name', self::REQUESTER_NAME)
             ->assertJsonPath('data.version', 2);
+    }
+
+    #[DataProvider('decisions')]
+    public function test_TheDecisionEventCarriesTheTraceparentOfTheRequest(string $action, string $decidedStatus): void
+    {
+        $this->withHeader('traceparent', self::TRACEPARENT);
+
+        $this->writeAs(token: $this->adminToken, path: $this->path . $action, ifMatch: '"1"');
+
+        $outboxRow = $this->app->make(ConnectionInterface::class)
+            ->table(OutboxDomainEventPublisher::TABLE)
+            ->first(['routing_key', 'headers']);
+
+        self::assertNotNull($outboxRow);
+        self::assertSame("travel_request.{$decidedStatus}.v1", $outboxRow->routing_key);
+        self::assertIsString($outboxRow->headers);
+        self::assertSame(['traceparent' => self::TRACEPARENT], json_decode($outboxRow->headers, true));
     }
 
     #[DataProvider('decisions')]

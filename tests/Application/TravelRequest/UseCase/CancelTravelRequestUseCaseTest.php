@@ -15,6 +15,7 @@ use Domain\TravelRequest\Exception\TravelRequestVersionMismatch;
 use Domain\TravelRequest\ValueObject\TravelRequestId;
 use PHPUnit\Framework\TestCase;
 use Tests\Support\Shared\Port\FrozenClock;
+use Tests\Support\Shared\Port\ImmediateTransaction;
 use Tests\Support\Shared\Port\SpyDomainEventPublisher;
 use Tests\Support\TravelRequest\Fixture\TravelRequestMother as Mother;
 use Tests\Support\TravelRequest\Port\InMemoryTravelRequestQueries;
@@ -26,6 +27,8 @@ final class CancelTravelRequestUseCaseTest extends TestCase
 
     private SpyDomainEventPublisher $events;
 
+    private ImmediateTransaction $transaction;
+
     private CancelTravelRequestUseCase $useCase;
 
     protected function setUp(): void
@@ -33,10 +36,12 @@ final class CancelTravelRequestUseCaseTest extends TestCase
         $clock = new FrozenClock(frozenAt: Mother::moment(moment: Mother::LATER));
         $this->travelRequests = new InMemoryTravelRequestRepository();
         $this->events = new SpyDomainEventPublisher();
+        $this->transaction = new ImmediateTransaction();
         $this->useCase = new CancelTravelRequestUseCase(
             travelRequests: $this->travelRequests,
             queries: new InMemoryTravelRequestQueries(travelRequests: $this->travelRequests),
             events: $this->events,
+            transaction: $this->transaction,
             clock: $clock,
         );
     }
@@ -60,7 +65,7 @@ final class CancelTravelRequestUseCaseTest extends TestCase
         self::assertEquals(Mother::moment(moment: Mother::LATER), $stored->updatedAt);
     }
 
-    public function test_PublishesCancelledEventOnce(): void
+    public function test_PublishesCancelledEventOnceInTheSameTransactionAsTheDecision(): void
     {
         $this->travelRequests->add(travelRequest: Mother::requested());
 
@@ -72,6 +77,7 @@ final class CancelTravelRequestUseCaseTest extends TestCase
 
         $published = $this->events->publishedEvents[0] ?? null;
 
+        self::assertSame(1, $this->transaction->completedRuns);
         self::assertCount(1, $this->events->publishedEvents);
         self::assertInstanceOf(TravelRequestCancelled::class, $published);
         self::assertSame(Mother::TRAVEL_REQUEST_ID, $published->travelRequestId->toString());

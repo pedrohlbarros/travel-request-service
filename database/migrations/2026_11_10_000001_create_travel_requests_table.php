@@ -24,14 +24,12 @@ return new class extends Migration {
                     ->nullable();
                 $table->timestamps();
 
-                // Lists are ordered by id, so each scope or filter index ends with it.
                 $table->index(columns: ['requester_id', 'id']);
                 $table->index(columns: ['status', 'id']);
                 $table->index(columns: ['created_at']);
                 $table->index(columns: ['departure_date']);
                 $table->index(columns: ['return_date']);
 
-                // Users with travel requests are kept: the request must still say who asked and who decided.
                 $table->foreign(columns: 'requester_id')
                     ->references('id')
                     ->on('users')

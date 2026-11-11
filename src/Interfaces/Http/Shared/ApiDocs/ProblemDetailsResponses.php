@@ -42,7 +42,6 @@ final class ProblemDetailsResponses extends ExceptionToResponseExtension
             return null;
         }
 
-        // Only request validation knows which field failed; a domain rule reports in the detail.
         $hasFieldErrors = is_a($exceptionClass, ValidationException::class, true);
 
         return self::responseFor(problemType: $problemType, hasFieldErrors: $hasFieldErrors);

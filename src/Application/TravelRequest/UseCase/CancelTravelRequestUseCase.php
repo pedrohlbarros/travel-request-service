@@ -6,6 +6,7 @@ namespace Application\TravelRequest\UseCase;
 
 use Application\Shared\Port\Clock;
 use Application\Shared\Port\DomainEventPublisher;
+use Application\Shared\Port\Transaction;
 use Application\TravelRequest\Input\CancelTravelRequestInput;
 use Application\TravelRequest\Output\TravelRequestOutput;
 use Application\TravelRequest\Port\TravelRequestQueries;
@@ -23,6 +24,7 @@ final readonly class CancelTravelRequestUseCase
         private TravelRequestRepository $travelRequests,
         private TravelRequestQueries $queries,
         private DomainEventPublisher $events,
+        private Transaction $transaction,
         private Clock $clock,
     ) {}
 
@@ -43,8 +45,10 @@ final readonly class CancelTravelRequestUseCase
             cancelledAt: $this->clock->now(),
         );
 
-        $this->travelRequests->update(travelRequest: $travelRequest, loadedVersion: $loadedVersion);
-        $this->events->publish(...$travelRequest->releaseEvents());
+        $this->transaction->run(work: function () use ($travelRequest, $loadedVersion): void {
+            $this->travelRequests->update(travelRequest: $travelRequest, loadedVersion: $loadedVersion);
+            $this->events->publish(...$travelRequest->releaseEvents());
+        });
 
         return $this->queries->get(id: $travelRequest->id);
     }

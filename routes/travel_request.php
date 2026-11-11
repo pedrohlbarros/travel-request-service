@@ -26,7 +26,6 @@ Route::prefix('api/v1/travel-requests')
             ->name(TravelRequestHttpServiceProvider::SHOW_ROUTE);
         Route::patch($travelRequest, ChangeTravelRequestDetailsController::class)
             ->middleware(RequireIfMatch::class);
-        // The role check comes first, so a regular user gets 403 before any precondition or lookup.
         Route::post($travelRequest . '/approve', ApproveTravelRequestController::class)
             ->middleware(['can:' . TravelRequestPolicy::APPROVE . ',' . TravelRequest::class, RequireIfMatch::class]);
         Route::post($travelRequest . '/cancel', CancelTravelRequestController::class)

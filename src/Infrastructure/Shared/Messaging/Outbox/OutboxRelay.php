@@ -1,0 +1,71 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Infrastructure\Shared\Messaging\Outbox;
+
+use Application\Shared\Port\Clock;
+use DateTimeZone;
+use Illuminate\Database\ConnectionInterface;
+use Infrastructure\Shared\Messaging\RabbitMq\RabbitMqOutboxPublisher;
+
+/**
+ * One batch per call. Rows stay locked until the broker confirms them, and other relays skip what is locked,
+ * so relays run side by side without publishing the same row twice.
+ */
+final readonly class OutboxRelay
+{
+    private const string SKIP_LOCKED = 'for update skip locked';
+
+    private const string TIMEZONE = 'UTC';
+
+    public function __construct(
+        private ConnectionInterface $connection,
+        private RabbitMqOutboxPublisher $publisher,
+        private Clock $clock,
+        private int $batchSize,
+    ) {}
+
+    /**
+     * @return int how many messages were published
+     */
+    public function relayBatch(): int
+    {
+        return $this->connection->transaction(function (): int {
+            $rows = $this->connection->table(OutboxDomainEventPublisher::TABLE)
+                ->whereNull('published_at')
+                ->orderBy('id')
+                ->limit($this->batchSize)
+                ->lock(self::SKIP_LOCKED)
+                ->get(['id', 'exchange', 'routing_key', 'payload', 'headers']);
+
+            $messages = [];
+            foreach ($rows as $row) {
+                $messages[] = PendingOutboxMessage::fromRow(row: $row);
+            }
+
+            if ($messages === []) {
+                return 0;
+            }
+
+            $this->publisher->publish(messages: $messages);
+            $this->markPublished(messages: $messages);
+
+            return \count($messages);
+        });
+    }
+
+    /**
+     * @param list<PendingOutboxMessage> $messages
+     */
+    private function markPublished(array $messages): void
+    {
+        $publishedAt = $this->clock->now()
+            ->setTimezone(new DateTimeZone(self::TIMEZONE));
+        $ids = array_map(static fn(PendingOutboxMessage $message): string => $message->idBytes, $messages);
+
+        $this->connection->table(OutboxDomainEventPublisher::TABLE)
+            ->whereIn('id', $ids)
+            ->update(['published_at' => $publishedAt->format(OutboxDomainEventPublisher::DATETIME_FORMAT)]);
+    }
+}

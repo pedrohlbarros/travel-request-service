@@ -40,6 +40,7 @@ Microsserviço em Laravel para gestão de pedidos de viagem corporativa. É um t
 | Erros | Formato da entrada = `/problems/validation-failed`; estado/regra e protocolo = `type` próprio; catálogo em `docs/api/problems.md` | [0031](docs/adr/0031-problem-details.md) |
 | API de pedidos | PATCH parcial (no-op sem versão); ordem 403 → 404 → 412 → 409; ETag strong `"<version>"`; Policy só por papel; cache em decorators da Infrastructure; cursor keyset próprio por `id`; Scramble só em local | [0033](docs/adr/0033-detalhes-da-api-de-pedidos.md) |
 | Pedido–usuário | FKs `requester_id`/`decided_by` → `users` (`restrictOnDelete`); relacionamento na Infrastructure por `RequesterModel` só leitura; resposta com `requester`/`decided_by` `{id, name}`; escritas devolvem o pedido relido | [0034](docs/adr/0034-relacionamento-pedido-usuario.md) |
+| Mensageria (detalhes) | Port `Transaction` (aprovar/cancelar); cache invalidado após commit; `OutboxDomainEventPublisher` genérico + mapper por context (tag); `outbox_messages`; CloudEvents estruturado; `traceparent` recebido; relay 200 ms → 2 s, lote 100, `--once`; `messaging:tap`/`outbox:status` | [0036](docs/adr/0036-detalhes-da-mensageria.md) |
 | CI | GitHub Actions builda a imagem e roda `make up` + `make qa` via compose (sem `services:`) | [0021](docs/adr/0021-ci-com-docker-compose.md) |
 | Docs | Planos + ADRs + diagramas; README enxuto | [0013](docs/adr/0013-documentacao.md) |
 | Padrões | Código, Application (CQRS leve), API, IDs, testes, automação | 0014–0019 |
