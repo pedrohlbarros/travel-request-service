@@ -40,11 +40,11 @@ help: ## List every target by section
 build: ## Rebuild the app image (after Dockerfile or PHP config changes)
 	$(COMPOSE) build app
 
-up: ## Start every service and wait until healthy
+up: ## Start the default profile and wait until healthy
 	$(COMPOSE) up -d --wait
 
-down: ## Stop and remove the containers (volumes are kept)
-	$(COMPOSE) down
+down: ## Stop and remove every container of every profile (volumes are kept)
+	$(COMPOSE) --profile "*" down
 
 restart: ## Restart every service
 	$(COMPOSE) restart
