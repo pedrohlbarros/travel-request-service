@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Infrastructure\TravelRequest\Query;
+namespace Infrastructure\Shared\Query;
 
 enum ListDirection: string
 {

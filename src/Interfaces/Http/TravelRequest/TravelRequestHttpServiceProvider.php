@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Interfaces\Http\TravelRequest;
 
-use Application\TravelRequest\Exception\InvalidListCursor;
+use Application\Shared\Exception\InvalidListCursor;
 use Domain\TravelRequest\Entity\TravelRequest;
 use Domain\TravelRequest\Exception\InvalidDestination;
 use Domain\TravelRequest\Exception\InvalidStatusTransition;

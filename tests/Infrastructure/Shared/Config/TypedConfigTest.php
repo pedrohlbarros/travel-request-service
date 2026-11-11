@@ -78,4 +78,38 @@ final class TypedConfigTest extends TestCase
 
         TypedConfig::positiveInt(config: $config, key: self::KEY);
     }
+
+    public function test_ReadsAListOfPositiveIntegers(): void
+    {
+        $config = new Repository(['service' => ['setting' => '10000, 60000,300000']]);
+
+        $values = TypedConfig::positiveIntList(config: $config, key: self::KEY);
+
+        self::assertSame([10000, 60000, 300000], $values);
+    }
+
+    /**
+     * @return array<string, array{mixed}>
+     */
+    public static function notPositiveIntegerLists(): array
+    {
+        return [
+            'empty' => [''],
+            'zeroItem' => ['10,0'],
+            'negativeItem' => ['10,-5'],
+            'textItem' => ['10,soon'],
+            'missing' => [null],
+        ];
+    }
+
+    #[DataProvider('notPositiveIntegerLists')]
+    public function test_RejectsWhatIsNotAListOfPositiveIntegers(mixed $setting): void
+    {
+        $config = new Repository(['service' => ['setting' => $setting]]);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageIs('Config "service.setting" must be a comma-separated list of positive numbers.');
+
+        TypedConfig::positiveIntList(config: $config, key: self::KEY);
+    }
 }

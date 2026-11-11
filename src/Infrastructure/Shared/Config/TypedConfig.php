@@ -12,6 +12,8 @@ use InvalidArgumentException;
  */
 final readonly class TypedConfig
 {
+    private const string LIST_SEPARATOR = ',';
+
     /**
      * @return non-empty-string
      */
@@ -43,5 +45,32 @@ final readonly class TypedConfig
         }
 
         return $number;
+    }
+
+    /**
+     * A comma-separated list of positive numbers, such as "10000,60000".
+     *
+     * @return non-empty-list<positive-int>
+     */
+    public static function positiveIntList(Config $config, string $key): array
+    {
+        $value = $config->get($key);
+        $items = explode(self::LIST_SEPARATOR, \is_string($value) ? $value : '');
+        $numbers = [];
+
+        foreach ($items as $item) {
+            $trimmedItem = trim($item);
+            $number = ctype_digit($trimmedItem) ? (int) $trimmedItem : 0;
+
+            if ($number <= 0) {
+                $message = \sprintf('Config "%s" must be a comma-separated list of positive numbers.', $key);
+
+                throw new InvalidArgumentException($message);
+            }
+
+            $numbers[] = $number;
+        }
+
+        return $numbers;
     }
 }

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Interfaces\Http\TravelRequest\Controller;
 
-use Application\TravelRequest\Exception\InvalidListCursor;
+use Application\Shared\Exception\InvalidListCursor;
 use Application\TravelRequest\UseCase\ListTravelRequestsUseCase;
 use Domain\TravelRequest\Entity\TravelRequest;
 use Illuminate\Contracts\Auth\Access\Gate;

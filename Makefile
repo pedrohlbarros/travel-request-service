@@ -14,8 +14,9 @@ FORWARD_RABBITMQ_PORT     ?= 5672
 FORWARD_RABBITMQ_UI_PORT  ?= 15672
 FORWARD_MAILPIT_SMTP_PORT ?= 1025
 FORWARD_MAILPIT_UI_PORT   ?= 8025
+FORWARD_REVERB_PORT       ?= 8080
 
-SERVICES := app outbox-relay mysql redis rabbitmq mailpit
+SERVICES := app outbox-relay notification-consumer reverb mysql redis rabbitmq mailpit
 
 ##@ Help
 
@@ -48,7 +49,7 @@ ps: ## Show container status and health
 	$(COMPOSE) ps
 
 urls: ## Show container IP, host port and URL of each service
-	@printf "\033[1m%-12s %-16s %-18s %s\033[0m\n" SERVICE "CONTAINER IP" "HOST" "URL"
+	@printf "\033[1m%-22s %-16s %-18s %s\033[0m\n" SERVICE "CONTAINER IP" "HOST" "URL"
 	@for service in $(SERVICES); do \
 		id=$$($(COMPOSE) ps -q $$service 2>/dev/null); \
 		ip=$$( [ -n "$$id" ] && docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}' $$id | xargs || echo "not running"); \
@@ -59,8 +60,10 @@ urls: ## Show container IP, host port and URL of each service
 			rabbitmq) host="localhost:$(FORWARD_RABBITMQ_PORT)"; url="http://localhost:$(FORWARD_RABBITMQ_UI_PORT) (management UI)" ;; \
 			mailpit)  host="localhost:$(FORWARD_MAILPIT_SMTP_PORT)"; url="http://localhost:$(FORWARD_MAILPIT_UI_PORT) (web UI)" ;; \
 			outbox-relay) host="-"; url="no port (make relay-logs)" ;; \
+			notification-consumer) host="-"; url="no port (make consumer-logs)" ;; \
+			reverb)   host="localhost:$(FORWARD_REVERB_PORT)"; url="http://localhost:$(FORWARD_APP_PORT)/docs/notifications (live page, APP_ENV=local)" ;; \
 		esac; \
-		printf "%-12s %-16s %-18s %s\n" $$service "$${ip:-not running}" "$$host" "$$url"; \
+		printf "%-22s %-16s %-18s %s\n" $$service "$${ip:-not running}" "$$host" "$$url"; \
 	done
 
 ##@ Setup
@@ -119,6 +122,24 @@ outbox: ## Show how many outbox messages are pending and published
 
 relay-logs: ## Follow the outbox relay logs
 	$(COMPOSE) logs -f --tail=100 outbox-relay
+
+##@ Notifications
+
+.PHONY: dlq dlq-replay consumer-logs reverb-logs mailpit
+dlq: ## Print the dead-lettered decisions with their reason, keeping them on the queue
+	$(PHP) artisan notification:dlq
+
+dlq-replay: ## Send every dead-lettered decision back to the notification queue
+	$(PHP) artisan notification:dlq --replay
+
+consumer-logs: ## Follow the notification consumer logs
+	$(COMPOSE) logs -f --tail=100 notification-consumer
+
+reverb-logs: ## Follow the Reverb server logs (runs with --debug)
+	$(COMPOSE) logs -f --tail=100 reverb
+
+mailpit: ## Print the Mailpit web UI URL
+	@echo "Mailpit: http://localhost:$(FORWARD_MAILPIT_UI_PORT)"
 
 ##@ Quality
 

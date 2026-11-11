@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Application\TravelRequest\Port;
 
-use Application\TravelRequest\Exception\InvalidListCursor;
+use Application\Shared\Exception\InvalidListCursor;
 use Application\TravelRequest\Output\TravelRequestOutput;
 use Application\TravelRequest\Output\TravelRequestPage;
 use Domain\TravelRequest\Exception\TravelRequestNotFound;

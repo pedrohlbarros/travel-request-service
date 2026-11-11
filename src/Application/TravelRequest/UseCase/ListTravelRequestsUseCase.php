@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Application\TravelRequest\UseCase;
 
-use Application\TravelRequest\Exception\InvalidListCursor;
+use Application\Shared\Exception\InvalidListCursor;
 use Application\TravelRequest\Input\ListTravelRequestsInput;
 use Application\TravelRequest\Output\TravelRequestPage;
 use Application\TravelRequest\Port\TravelRequestListCriteria;

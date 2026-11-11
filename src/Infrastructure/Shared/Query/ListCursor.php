@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Infrastructure\TravelRequest\Query;
+namespace Infrastructure\Shared\Query;
 
-use Application\TravelRequest\Exception\InvalidListCursor;
+use Application\Shared\Exception\InvalidListCursor;
 use Domain\Shared\Exception\InvalidIdentifier;
-use Domain\TravelRequest\ValueObject\TravelRequestId;
+use Domain\Shared\ValueObject\Uuid7;
 use JsonException;
 
 /**
@@ -24,18 +24,18 @@ final readonly class ListCursor
     private const int JSON_DEPTH = 2;
 
     private function __construct(
-        public TravelRequestId $edgeId,
+        public Uuid7 $edgeId,
         public ListDirection $direction,
     ) {}
 
     public static function olderThan(string $edgeId): self
     {
-        return new self(edgeId: TravelRequestId::fromString(id: $edgeId), direction: ListDirection::Older);
+        return new self(edgeId: Uuid7::fromString(candidate: $edgeId), direction: ListDirection::Older);
     }
 
     public static function newerThan(string $edgeId): self
     {
-        return new self(edgeId: TravelRequestId::fromString(id: $edgeId), direction: ListDirection::Newer);
+        return new self(edgeId: Uuid7::fromString(candidate: $edgeId), direction: ListDirection::Newer);
     }
 
     /**
@@ -53,7 +53,7 @@ final readonly class ListCursor
         }
 
         try {
-            return new self(edgeId: TravelRequestId::fromString(id: $edgeId), direction: $direction);
+            return new self(edgeId: Uuid7::fromString(candidate: $edgeId), direction: $direction);
         } catch (InvalidIdentifier) {
             throw InvalidListCursor::unreadable();
         }
@@ -61,7 +61,7 @@ final readonly class ListCursor
 
     public function encode(): string
     {
-        $position = ['id' => $this->edgeId->toString(), 'direction' => $this->direction->value];
+        $position = ['id' => $this->edgeId->value, 'direction' => $this->direction->value];
         $base64 = base64_encode(json_encode($position, JSON_THROW_ON_ERROR));
 
         return rtrim(strtr($base64, self::BASE64_ALPHABET, self::URL_SAFE_ALPHABET), self::BASE64_PADDING);
