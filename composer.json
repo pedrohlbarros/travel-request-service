@@ -11,6 +11,7 @@
         "ext-redis": "*",
         "ext-sockets": "*",
         "ext-swoole": "*",
+        "dedoc/scramble": "^0.13.53",
         "laravel/framework": "^13.40",
         "laravel/octane": "^2.23",
         "lcobucci/jwt": "^5.6",

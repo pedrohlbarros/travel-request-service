@@ -55,6 +55,14 @@ final readonly class TravelPeriod
         }
     }
 
+    public function equals(self $other): bool
+    {
+        $isSameDeparture = $this->departureDate->format(self::CALENDAR_DATE) === $other->departureDate->format(self::CALENDAR_DATE);
+        $isSameReturn = $this->returnDate->format(self::CALENDAR_DATE) === $other->returnDate->format(self::CALENDAR_DATE);
+
+        return $isSameDeparture && $isSameReturn;
+    }
+
     private static function calendarDayOf(DateTimeImmutable $moment): DateTimeImmutable
     {
         return new DateTimeImmutable($moment->format(self::CALENDAR_DATE), new DateTimeZone(self::CALENDAR_TIMEZONE));

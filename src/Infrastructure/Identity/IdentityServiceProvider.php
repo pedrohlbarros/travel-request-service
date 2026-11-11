@@ -26,7 +26,7 @@ use Infrastructure\Identity\Token\LcobucciAccessTokens;
 use Infrastructure\Identity\Token\RandomOpaqueTokenGenerator;
 use Infrastructure\Identity\Token\RedisAccessTokenRevocationList;
 use Infrastructure\Identity\Token\RsaJsonWebKeySet;
-use InvalidArgumentException;
+use Infrastructure\Shared\Config\TypedConfig;
 
 final class IdentityServiceProvider extends ServiceProvider
 {
@@ -50,10 +50,10 @@ final class IdentityServiceProvider extends ServiceProvider
                 $config = $app->make(Config::class);
 
                 return new JwtSettings(
-                    issuer: self::stringFrom(config: $config, key: 'identity.jwt.issuer'),
-                    audience: self::stringFrom(config: $config, key: 'identity.jwt.audience'),
-                    privateKeyPath: self::stringFrom(config: $config, key: 'identity.jwt.private_key_path'),
-                    publicKeyPath: self::stringFrom(config: $config, key: 'identity.jwt.public_key_path'),
+                    issuer: TypedConfig::nonEmptyString(config: $config, key: 'identity.jwt.issuer'),
+                    audience: TypedConfig::nonEmptyString(config: $config, key: 'identity.jwt.audience'),
+                    privateKeyPath: TypedConfig::nonEmptyString(config: $config, key: 'identity.jwt.private_key_path'),
+                    publicKeyPath: TypedConfig::nonEmptyString(config: $config, key: 'identity.jwt.public_key_path'),
                 );
             },
         );
@@ -76,8 +76,8 @@ final class IdentityServiceProvider extends ServiceProvider
                 $config = $app->make(Config::class);
 
                 return new TokenLifetimes(
-                    accessTokenSeconds: self::positiveIntFrom(config: $config, key: 'identity.jwt.access_token_ttl'),
-                    refreshTokenSeconds: self::positiveIntFrom(config: $config, key: 'identity.refresh_token_ttl'),
+                    accessTokenSeconds: TypedConfig::positiveInt(config: $config, key: 'identity.jwt.access_token_ttl'),
+                    refreshTokenSeconds: TypedConfig::positiveInt(config: $config, key: 'identity.refresh_token_ttl'),
                 );
             },
         );
@@ -88,38 +88,5 @@ final class IdentityServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             $this->commands([GenerateJwtKeysCommand::class]);
         }
-    }
-
-    /**
-     * @return non-empty-string
-     */
-    private static function stringFrom(Config $config, string $key): string
-    {
-        $value = $config->get($key);
-
-        if (! \is_string($value) || $value === '') {
-            $message = \sprintf('Config "%s" must be a non-empty string.', $key);
-
-            throw new InvalidArgumentException($message);
-        }
-
-        return $value;
-    }
-
-    /**
-     * @return positive-int
-     */
-    private static function positiveIntFrom(Config $config, string $key): int
-    {
-        $value = $config->get($key);
-        $seconds = is_numeric($value) ? (int) $value : 0;
-
-        if ($seconds <= 0) {
-            $message = \sprintf('Config "%s" must be a positive number of seconds.', $key);
-
-            throw new InvalidArgumentException($message);
-        }
-
-        return $seconds;
     }
 }

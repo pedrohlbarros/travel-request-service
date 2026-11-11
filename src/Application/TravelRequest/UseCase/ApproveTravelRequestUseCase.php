@@ -8,6 +8,7 @@ use Application\Shared\Port\Clock;
 use Application\Shared\Port\DomainEventPublisher;
 use Application\TravelRequest\Input\ApproveTravelRequestInput;
 use Application\TravelRequest\Output\TravelRequestOutput;
+use Application\TravelRequest\Port\TravelRequestQueries;
 use Domain\Shared\Exception\InvalidIdentifier;
 use Domain\TravelRequest\Exception\InvalidStatusTransition;
 use Domain\TravelRequest\Exception\TravelRequestNotFound;
@@ -20,6 +21,7 @@ final readonly class ApproveTravelRequestUseCase
 {
     public function __construct(
         private TravelRequestRepository $travelRequests,
+        private TravelRequestQueries $queries,
         private DomainEventPublisher $events,
         private Clock $clock,
     ) {}
@@ -44,6 +46,6 @@ final readonly class ApproveTravelRequestUseCase
         $this->travelRequests->update(travelRequest: $travelRequest, loadedVersion: $loadedVersion);
         $this->events->publish(...$travelRequest->releaseEvents());
 
-        return TravelRequestOutput::fromEntity(travelRequest: $travelRequest);
+        return $this->queries->get(id: $travelRequest->id);
     }
 }

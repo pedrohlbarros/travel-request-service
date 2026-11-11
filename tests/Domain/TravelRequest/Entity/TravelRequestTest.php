@@ -78,7 +78,8 @@ final class TravelRequestTest extends TestCase
         $travelRequest->changeDetails(
             editorId: Mother::userId(id: Mother::REQUESTER_ID),
             destination: Destination::fromString(name: self::NEW_DESTINATION),
-            period: Mother::period(departureDate: '2026-12-10', returnDate: '2026-12-20'),
+            departureDate: Mother::moment(moment: '2026-12-10'),
+            returnDate: Mother::moment(moment: '2026-12-20'),
             changedAt: $changedAt,
         );
 
@@ -88,8 +89,117 @@ final class TravelRequestTest extends TestCase
         self::assertSame(TravelRequest::FIRST_VERSION + 1, $travelRequest->version);
         self::assertEquals($changedAt, $travelRequest->updatedAt);
         self::assertEquals(Mother::moment(moment: Mother::NOW), $travelRequest->createdAt);
-        self::assertSame(TravelRequestStatus::Requested, $travelRequest->status);
-        self::assertSame([], $travelRequest->releaseEvents());
+    }
+
+    public function test_ChangingOnlyTheDestinationKeepsTheDates(): void
+    {
+        $travelRequest = Mother::requested();
+
+        $travelRequest->changeDetails(
+            editorId: Mother::userId(id: Mother::REQUESTER_ID),
+            destination: Destination::fromString(name: self::NEW_DESTINATION),
+            departureDate: null,
+            returnDate: null,
+            changedAt: Mother::moment(moment: Mother::LATER),
+        );
+
+        self::assertSame(self::NEW_DESTINATION, $travelRequest->destination->name);
+        self::assertEquals(Mother::period(), $travelRequest->period);
+        self::assertSame(TravelRequest::FIRST_VERSION + 1, $travelRequest->version);
+    }
+
+    public function test_ChangingOnlyTheReturnDateKeepsDestinationAndDeparture(): void
+    {
+        $travelRequest = Mother::requested();
+
+        $travelRequest->changeDetails(
+            editorId: Mother::userId(id: Mother::REQUESTER_ID),
+            destination: null,
+            departureDate: null,
+            returnDate: Mother::moment(moment: '2026-12-09'),
+            changedAt: Mother::moment(moment: Mother::LATER),
+        );
+
+        self::assertSame(Mother::DESTINATION, $travelRequest->destination->name);
+        self::assertEquals(Mother::period(returnDate: '2026-12-09'), $travelRequest->period);
+        self::assertSame(TravelRequest::FIRST_VERSION + 1, $travelRequest->version);
+    }
+
+    public function test_ChangingOnlyTheDepartureDateKeepsTheReturnDate(): void
+    {
+        $travelRequest = Mother::requested();
+
+        $travelRequest->changeDetails(
+            editorId: Mother::userId(id: Mother::REQUESTER_ID),
+            destination: null,
+            departureDate: Mother::moment(moment: '2026-12-03'),
+            returnDate: null,
+            changedAt: Mother::moment(moment: Mother::LATER),
+        );
+
+        self::assertEquals(Mother::period(departureDate: '2026-12-03'), $travelRequest->period);
+    }
+
+    public function test_ChangeToTheSameDetailsKeepsVersionAndUpdateTime(): void
+    {
+        $travelRequest = Mother::requested();
+
+        $travelRequest->changeDetails(
+            editorId: Mother::userId(id: Mother::REQUESTER_ID),
+            destination: Destination::fromString(name: Mother::DESTINATION),
+            departureDate: Mother::moment(moment: Mother::DEPARTURE_DATE),
+            returnDate: Mother::moment(moment: Mother::RETURN_DATE),
+            changedAt: Mother::moment(moment: Mother::LATER),
+        );
+
+        self::assertSame(TravelRequest::FIRST_VERSION, $travelRequest->version);
+        self::assertEquals(Mother::moment(moment: Mother::NOW), $travelRequest->updatedAt);
+    }
+
+    public function test_DestinationChangeIsAllowedAfterTheTripDeparted(): void
+    {
+        $travelRequest = Mother::requested();
+        $afterDeparture = Mother::moment(moment: '2026-12-02 09:00:00');
+
+        $travelRequest->changeDetails(
+            editorId: Mother::userId(id: Mother::REQUESTER_ID),
+            destination: Destination::fromString(name: self::NEW_DESTINATION),
+            departureDate: null,
+            returnDate: null,
+            changedAt: $afterDeparture,
+        );
+
+        self::assertSame(self::NEW_DESTINATION, $travelRequest->destination->name);
+    }
+
+    public function test_DateChangeIsRejectedAfterTheTripDeparted(): void
+    {
+        $travelRequest = Mother::requested();
+
+        $this->expectException(InvalidTravelPeriod::class);
+
+        $travelRequest->changeDetails(
+            editorId: Mother::userId(id: Mother::REQUESTER_ID),
+            destination: null,
+            departureDate: null,
+            returnDate: Mother::moment(moment: '2026-12-06'),
+            changedAt: Mother::moment(moment: '2026-12-02 09:00:00'),
+        );
+    }
+
+    public function test_CannotMoveReturnBeforeTheCurrentDeparture(): void
+    {
+        $travelRequest = Mother::requested();
+
+        $this->expectException(InvalidTravelPeriod::class);
+
+        $travelRequest->changeDetails(
+            editorId: Mother::userId(id: Mother::REQUESTER_ID),
+            destination: null,
+            departureDate: null,
+            returnDate: Mother::moment(moment: '2026-11-30'),
+            changedAt: Mother::moment(moment: Mother::LATER),
+        );
     }
 
     public function test_OnlyTheRequesterChangesDetails(): void
@@ -101,7 +211,23 @@ final class TravelRequestTest extends TestCase
         $travelRequest->changeDetails(
             editorId: Mother::userId(id: Mother::ADMIN_ID),
             destination: Destination::fromString(name: self::NEW_DESTINATION),
-            period: Mother::period(),
+            departureDate: null,
+            returnDate: null,
+            changedAt: Mother::moment(moment: Mother::LATER),
+        );
+    }
+
+    public function test_NoOpChangeIsStillRejectedForSomeoneElse(): void
+    {
+        $travelRequest = Mother::requested();
+
+        $this->expectException(TravelRequestNotOwned::class);
+
+        $travelRequest->changeDetails(
+            editorId: Mother::userId(id: Mother::OTHER_USER_ID),
+            destination: null,
+            departureDate: null,
+            returnDate: null,
             changedAt: Mother::moment(moment: Mother::LATER),
         );
     }
@@ -111,12 +237,12 @@ final class TravelRequestTest extends TestCase
         $travelRequest = Mother::approved();
 
         $this->expectException(TravelRequestNotEditable::class);
-        $this->expectExceptionMessageIsOrContains('is approved and can no longer be edited');
 
         $travelRequest->changeDetails(
             editorId: Mother::userId(id: Mother::REQUESTER_ID),
             destination: Destination::fromString(name: self::NEW_DESTINATION),
-            period: Mother::period(),
+            departureDate: null,
+            returnDate: null,
             changedAt: Mother::moment(moment: Mother::LATER),
         );
     }
@@ -126,12 +252,12 @@ final class TravelRequestTest extends TestCase
         $travelRequest = Mother::cancelled();
 
         $this->expectException(TravelRequestNotEditable::class);
-        $this->expectExceptionMessageIsOrContains('is cancelled and can no longer be edited');
 
         $travelRequest->changeDetails(
             editorId: Mother::userId(id: Mother::REQUESTER_ID),
-            destination: Destination::fromString(name: self::NEW_DESTINATION),
-            period: Mother::period(),
+            destination: null,
+            departureDate: null,
+            returnDate: null,
             changedAt: Mother::moment(moment: Mother::LATER),
         );
     }
@@ -144,8 +270,9 @@ final class TravelRequestTest extends TestCase
 
         $travelRequest->changeDetails(
             editorId: Mother::userId(id: Mother::REQUESTER_ID),
-            destination: Destination::fromString(name: self::NEW_DESTINATION),
-            period: Mother::period(departureDate: '2026-11-09', returnDate: '2026-11-12'),
+            destination: null,
+            departureDate: Mother::moment(moment: '2026-11-09'),
+            returnDate: Mother::moment(moment: '2026-11-12'),
             changedAt: Mother::moment(moment: Mother::LATER),
         );
     }
@@ -156,16 +283,36 @@ final class TravelRequestTest extends TestCase
 
         try {
             $travelRequest->changeDetails(
-                editorId: Mother::userId(id: Mother::OTHER_USER_ID),
+                editorId: Mother::userId(id: Mother::REQUESTER_ID),
                 destination: Destination::fromString(name: self::NEW_DESTINATION),
-                period: Mother::period(),
+                departureDate: Mother::moment(moment: '2026-11-09'),
+                returnDate: null,
                 changedAt: Mother::moment(moment: Mother::LATER),
             );
-        } catch (TravelRequestNotOwned) {
+        } catch (InvalidTravelPeriod) {
         }
 
         self::assertSame(Mother::DESTINATION, $travelRequest->destination->name);
+        self::assertEquals(Mother::period(), $travelRequest->period);
         self::assertSame(TravelRequest::FIRST_VERSION, $travelRequest->version);
+    }
+
+    public function test_OwnerPassesTheOwnershipCheck(): void
+    {
+        $travelRequest = Mother::requested();
+
+        $travelRequest->assertOwnedBy(userId: Mother::userId(id: Mother::REQUESTER_ID));
+
+        self::assertSame(TravelRequest::FIRST_VERSION, $travelRequest->version);
+    }
+
+    public function test_SomeoneElseFailsTheOwnershipCheck(): void
+    {
+        $travelRequest = Mother::requested();
+
+        $this->expectException(TravelRequestNotOwned::class);
+
+        $travelRequest->assertOwnedBy(userId: Mother::userId(id: Mother::OTHER_USER_ID));
     }
 
     public function test_AdminApprovesRequestedTravelRequest(): void

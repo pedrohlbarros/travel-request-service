@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Application\TravelRequest\UseCase;
 
 use Application\TravelRequest\Input\ChangeTravelRequestDetailsInput;
-use Application\TravelRequest\Output\TravelRequestOutput;
 use Application\TravelRequest\UseCase\ChangeTravelRequestDetailsUseCase;
 use Domain\TravelRequest\Entity\TravelRequest;
 use Domain\TravelRequest\Exception\TravelRequestNotEditable;
@@ -16,6 +15,7 @@ use Domain\TravelRequest\ValueObject\TravelRequestId;
 use PHPUnit\Framework\TestCase;
 use Tests\Support\Shared\Port\FrozenClock;
 use Tests\Support\TravelRequest\Fixture\TravelRequestMother as Mother;
+use Tests\Support\TravelRequest\Port\InMemoryTravelRequestQueries;
 use Tests\Support\TravelRequest\Repository\InMemoryTravelRequestRepository;
 
 final class ChangeTravelRequestDetailsUseCaseTest extends TestCase
@@ -34,7 +34,11 @@ final class ChangeTravelRequestDetailsUseCaseTest extends TestCase
     {
         $clock = new FrozenClock(frozenAt: Mother::moment(moment: Mother::LATER));
         $this->travelRequests = new InMemoryTravelRequestRepository();
-        $this->useCase = new ChangeTravelRequestDetailsUseCase(travelRequests: $this->travelRequests, clock: $clock);
+        $this->useCase = new ChangeTravelRequestDetailsUseCase(
+            travelRequests: $this->travelRequests,
+            queries: new InMemoryTravelRequestQueries(travelRequests: $this->travelRequests),
+            clock: $clock,
+        );
     }
 
     public function test_RequesterChangesDestinationAndDates(): void
@@ -48,7 +52,7 @@ final class ChangeTravelRequestDetailsUseCaseTest extends TestCase
 
         $stored = $this->storedTravelRequest();
 
-        self::assertEquals(TravelRequestOutput::fromEntity(travelRequest: $stored), $changed);
+        self::assertEquals(Mother::output(travelRequest: $stored), $changed);
         self::assertSame(self::NEW_DESTINATION, $stored->destination->name);
         self::assertEquals(
             Mother::period(departureDate: self::NEW_DEPARTURE_DATE, returnDate: self::NEW_RETURN_DATE),
@@ -56,6 +60,60 @@ final class ChangeTravelRequestDetailsUseCaseTest extends TestCase
         );
         self::assertSame(TravelRequest::FIRST_VERSION + 1, $stored->version);
         self::assertEquals(Mother::moment(moment: Mother::LATER), $stored->updatedAt);
+    }
+
+    public function test_ChangesOnlyTheGivenDetail(): void
+    {
+        $this->travelRequests->add(travelRequest: Mother::requested());
+        $destinationOnly = new ChangeTravelRequestDetailsInput(
+            travelRequestId: Mother::TRAVEL_REQUEST_ID,
+            editorId: Mother::REQUESTER_ID,
+            expectedVersion: TravelRequest::FIRST_VERSION,
+            destination: self::NEW_DESTINATION,
+            departureDate: null,
+            returnDate: null,
+        );
+
+        $this->useCase->execute(input: $destinationOnly);
+
+        $stored = $this->storedTravelRequest();
+
+        self::assertSame(self::NEW_DESTINATION, $stored->destination->name);
+        self::assertEquals(Mother::period(), $stored->period);
+        self::assertSame(TravelRequest::FIRST_VERSION + 1, $stored->version);
+    }
+
+    public function test_SameDetailsStoreNothingAndKeepTheVersion(): void
+    {
+        $this->travelRequests->add(travelRequest: Mother::requested());
+        $sameDestination = new ChangeTravelRequestDetailsInput(
+            travelRequestId: Mother::TRAVEL_REQUEST_ID,
+            editorId: Mother::REQUESTER_ID,
+            expectedVersion: TravelRequest::FIRST_VERSION,
+            destination: Mother::DESTINATION,
+            departureDate: null,
+            returnDate: null,
+        );
+
+        $unchanged = $this->useCase->execute(input: $sameDestination);
+
+        $stored = $this->storedTravelRequest();
+
+        self::assertSame(TravelRequest::FIRST_VERSION, $unchanged->version);
+        self::assertSame(TravelRequest::FIRST_VERSION, $stored->version);
+        self::assertEquals(Mother::moment(moment: Mother::NOW), $stored->updatedAt);
+    }
+
+    public function test_SomeoneElseWithAStaleVersionStillGetsNotOwned(): void
+    {
+        $this->travelRequests->add(travelRequest: Mother::requested());
+
+        $this->expectException(TravelRequestNotOwned::class);
+
+        $this->useCase->execute(input: $this->changeBy(
+            editorId: Mother::OTHER_USER_ID,
+            expectedVersion: TravelRequest::FIRST_VERSION + 1,
+        ));
     }
 
     public function test_RejectsStaleExpectedVersion(): void

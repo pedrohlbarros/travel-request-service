@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Infrastructure\Shared;
 
 use Application\Shared\Port\Clock;
+use Application\Shared\Port\DomainEventPublisher;
 use Application\Shared\Port\IdentifierGenerator;
 use Application\Shared\UseCase\CheckReadinessUseCase;
 use Illuminate\Contracts\Config\Repository as Config;
@@ -15,6 +16,7 @@ use Infrastructure\Shared\Health\MySqlHealthCheck;
 use Infrastructure\Shared\Health\RabbitMqHealthCheck;
 use Infrastructure\Shared\Health\RedisHealthCheck;
 use Infrastructure\Shared\Identifier\LaravelUuid7Generator;
+use Infrastructure\Shared\Messaging\NullDomainEventPublisher;
 use Infrastructure\Shared\Messaging\RabbitMqConnectionFactory;
 
 final class SharedServiceProvider extends ServiceProvider
@@ -25,6 +27,7 @@ final class SharedServiceProvider extends ServiceProvider
     public array $bindings = [
         Clock::class => SystemClock::class,
         IdentifierGenerator::class => LaravelUuid7Generator::class,
+        DomainEventPublisher::class => NullDomainEventPublisher::class,
     ];
 
     public function register(): void

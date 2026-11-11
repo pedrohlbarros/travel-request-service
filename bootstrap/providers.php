@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 use Infrastructure\Identity\IdentityServiceProvider;
 use Infrastructure\Shared\SharedServiceProvider;
+use Infrastructure\TravelRequest\TravelRequestServiceProvider;
 use Interfaces\Console\Identity\IdentityConsoleServiceProvider;
 use Interfaces\Http\Identity\IdentityHttpServiceProvider;
 use Interfaces\Http\Shared\SharedHttpServiceProvider;
+use Interfaces\Http\TravelRequest\TravelRequestHttpServiceProvider;
 
 return [
     SharedServiceProvider::class,
@@ -14,4 +16,6 @@ return [
     IdentityServiceProvider::class,
     IdentityHttpServiceProvider::class,
     IdentityConsoleServiceProvider::class,
+    TravelRequestServiceProvider::class,
+    TravelRequestHttpServiceProvider::class,
 ];

@@ -2,6 +2,10 @@
 
 declare(strict_types=1);
 
+use Application\TravelRequest\Output\TravelRequestOutput;
+use Application\TravelRequest\Output\TravelRequestPage;
+use Application\TravelRequest\Output\UserReferenceOutput;
+use Domain\TravelRequest\Enum\TravelRequestStatus;
 use Illuminate\Support\Str;
 
 $appNameSlug = Str::slug((string) env('APP_NAME', 'laravel'));
@@ -130,11 +134,18 @@ return [
     |--------------------------------------------------------------------------
     |
     | This value determines the classes that can be unserialized from cache
-    | storage. By default, no PHP classes will be unserialized from your
-    | cache to prevent gadget chain attacks if your APP_KEY is leaked.
+    | storage. Only the read models cached by the application are allowed,
+    | to prevent gadget chain attacks if your APP_KEY is leaked.
     |
     */
 
-    'serializable_classes' => false,
+    'serializable_classes' => [
+        TravelRequestOutput::class,
+        TravelRequestPage::class,
+        UserReferenceOutput::class,
+        TravelRequestStatus::class,
+        DateTimeImmutable::class,
+        DateTimeZone::class,
+    ],
 
 ];

@@ -50,6 +50,20 @@ final class InMemoryTravelRequestRepository implements TravelRequestRepository
         $this->store(travelRequest: $travelRequest);
     }
 
+    /**
+     * @return list<TravelRequest>
+     */
+    public function all(): array
+    {
+        $copies = [];
+
+        foreach ($this->storedTravelRequestById as $storedTravelRequest) {
+            $copies[] = clone $storedTravelRequest;
+        }
+
+        return $copies;
+    }
+
     private function store(TravelRequest $travelRequest): void
     {
         $storedCopy = clone $travelRequest;

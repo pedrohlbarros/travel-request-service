@@ -18,6 +18,17 @@ final class DestinationTest extends TestCase
         self::assertSame('São Paulo', $destination->name);
     }
 
+    public function test_EqualsTheSameNameIgnoringSurroundingWhitespace(): void
+    {
+        $destination = Destination::fromString(name: 'Lisbon');
+
+        $isSameAsPadded = $destination->equals(other: Destination::fromString(name: ' Lisbon '));
+        $isSameAsLowercase = $destination->equals(other: Destination::fromString(name: 'lisbon'));
+
+        self::assertTrue($isSameAsPadded);
+        self::assertFalse($isSameAsLowercase);
+    }
+
     /**
      * @return array<string, array{string}>
      */

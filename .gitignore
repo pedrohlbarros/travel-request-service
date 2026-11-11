@@ -27,6 +27,7 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 /build
+/storage/openapi.json
 /storage/phpstan
 /storage/infection
 /.deptrac.cache
