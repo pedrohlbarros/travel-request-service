@@ -1,8 +1,65 @@
-# Resultados dos testes de carga
+# Testes de carga
 
-Medições da fase 07, feitas em 2026-11-11, com as metas do ADR 0041 e as otimizações do ADR 0042. Tudo roda na mesma máquina, e os números dependem do hardware: servem de referência, não de garantia.
+Os testes de carga usam o [k6](https://grafana.com/docs/k6/), no perfil `load` do Docker Compose. Os scripts ficam em [tests/Load](../tests/Load). As decisões estão nos ADRs [0039](adr/0039-detalhes-dos-testes-de-carga.md), [0041](adr/0041-metas-de-desempenho-e-carga-de-projeto.md) e [0042](adr/0042-otimizacao-de-desempenho.md).
 
-## Ambiente
+## Cenários
+
+| Cenário | Comando | O que faz | Falha o teste quando |
+|---|---|---|---|
+| Smoke | `make load-smoke` | 1 VU por 30 s com a mistura completa | algum check falha, erros ≥ 1% ou p95 ≥ 500 ms |
+| Load | `make load-load` | Taxa constante de cerca de 100 req/s por 5 min (carga de projeto) | as metas de latência por operação, erros ≥ 0,1%, menos de 95 req/s ou iterações descartadas |
+| Capacity | `make load-capacity` | 50 VUs por 5 min, o mais rápido que o serviço responder | erros ≥ 0,1% ou checks < 99%; vazão e latência são só registradas |
+| Stress | `make load-stress` | 50 → 400 VUs em estágios de 2 min | erros > 20% (interrompe); o resumo aponta o teto |
+| Concorrência | `make load-concurrency` | 20 admins decidem cada um de 50 pedidos no mesmo instante | qualquer pedido com mais de uma vitória, status fora de 200/409/412 ou versão final diferente de 2 |
+
+A mistura de operações é a mesma em todos, exceto na concorrência:
+- 50%: listar os próprios pedidos e seguir para a próxima página;
+- 20%: detalhe de um pedido;
+- 15%: criar um pedido;
+- 5%: editar com `If-Match`;
+- 10%: um admin decide um pedido pendente.
+
+Na edição e na decisão, 409 e 412 são resultados esperados.
+
+## Metas
+
+A carga de projeto é de **100 req/s**, cerca de 60× o pico estimado de uma empresa de 100 mil funcionários. O modelo de uso e as fontes estão no [ADR 0041](adr/0041-metas-de-desempenho-e-carga-de-projeto.md).
+
+| Ponto | Meta |
+|---|---|
+| Leitura (listar, detalhe) | p95 ≤ 150 ms, p99 ≤ 300 ms |
+| Escrita (criar, editar, aprovar, cancelar) | p95 ≤ 250 ms, p99 ≤ 500 ms |
+| Erros | < 0,1% |
+| CPU na carga de projeto | ≤ 70% |
+| Teto do stress | ≥ 100 VUs dentro da meta de leitura |
+| Notificação ponta a ponta | p95 ≤ 5 s, sem fila crescendo |
+| Custo do tracing | ≤ 10% de vazão |
+
+## Como rodar
+
+```sh
+make up && make load-seed            # 55 usuários de carga e 10 mil pedidos
+make obs-measure                     # opcional: dashboards do k6 e CPU por container no Grafana, com o tracing desligado
+make load-reset && make load-load RUN=minha-rodada
+make load-pipeline                   # latência decisão → notificação e filas
+make load-reset && make load-capacity RUN=minha-rodada
+make load-reset && make load-stress RUN=minha-rodada
+make load-concurrency && make load-smoke
+```
+
+- `make load-reset` volta os dados de carga ao estado do seed antes de cada rodada.
+- `RUN=` dá nome ao resumo em `build/load/<cenário>-<rótulo>.json`.
+- `DURATION=`, `VUS=` e `LOAD_RATE=` ajustam os cenários.
+- Para medir sem disputa de CPU, reserve núcleos no `.env` antes do `make up`: `APP_CPUSET`, `K6_CPUSET` e `BACKING_CPUSET` (ex.: `0-2,6-8`, `5,11` e `3-4,9-10` numa CPU de 6 núcleos e 12 threads).
+- Para medir o custo do tracing, use `make obs` no lugar do `make obs-measure`.
+
+O smoke e a concorrência também rodam no CI, depois do `make qa`.
+
+## Resultados
+
+Medições feitas em 2026-11-11. Tudo roda na mesma máquina, e os números dependem do hardware: servem de referência, não de garantia.
+
+### Ambiente
 
 | Item | Valor |
 |---|---|
@@ -15,17 +72,9 @@ Medições da fase 07, feitas em 2026-11-11, com as metas do ADR 0041 e as otimi
 | SDK OTel | desligado, salvo nas rodadas de custo do SDK (`make obs-measure` deixa no ar só o Prometheus, o Grafana e o cAdvisor) |
 | Dados | `make load-reset` antes de cada rodada: 55 usuários de carga e 10 mil pedidos |
 
-## Metas (ADR 0041)
+### Linha de base × final
 
-Carga de projeto de 100 req/s, cerca de 60× o pico estimado de uma empresa de 100 mil funcionários. As metas por operação são:
-- leitura: p95 ≤ 150 ms e p99 ≤ 300 ms;
-- escrita: p95 ≤ 250 ms e p99 ≤ 500 ms.
-
-Valem ainda: erros < 0,1%, CPU ≤ 70% e notificação ponta a ponta com p95 ≤ 5 s. A mistura continua 70% leitura e 30% escrita.
-
-## Linha de base × final
-
-### Load: carga de projeto, 100 req/s por 5 min
+#### Load: carga de projeto, 100 req/s por 5 min
 
 | Métrica | Base | Final | Variação | Meta |
 |---|---|---|---|---|
@@ -42,7 +91,7 @@ Valem ainda: erros < 0,1%, CPU ≤ 70% e notificação ponta a ponta com p95 ≤
 - Todas as metas passam, exceto um ponto: no final, o p99 do **cancelamento** ficou em 500,2 ms, ou seja, 0,2 ms acima da meta. O p99 das escritas é a métrica mais instável. Ele depende de poucos commits lentos no disco e de esperas de lock entre escritas no mesmo pedido (ver "Contenção de escrita").
 - Numa repetição de 2 min com a mesma configuração final, a escrita deu p95 de 85 ms e p99 de 328 ms, e a leitura, p95 de 14 ms e p99 de 20 ms.
 
-### Capacity: 50 VUs por 5 min
+#### Capacity: 50 VUs por 5 min
 
 | Métrica | Base | Final | Variação |
 |---|---|---|---|
@@ -53,7 +102,7 @@ Valem ainda: erros < 0,1%, CPU ≤ 70% e notificação ponta a ponta com p95 ≤
 | CPU da API (média) | 3,15 de 6 | 5,60 de 6 | a API passou a usar a CPU que tem |
 | CPU da réplica (média) | 0,43 | 0,09 | −79% |
 
-### Stress: 50 → 400 VUs, estágios de 2 min
+#### Stress: 50 → 400 VUs, estágios de 2 min
 
 | VUs | Base: req/s, leitura p95, escrita p95 | Final: req/s, leitura p95, escrita p95 |
 |---|---|---|
@@ -68,7 +117,7 @@ Valem ainda: erros < 0,1%, CPU ≤ 70% e notificação ponta a ponta com p95 ≤
   - no final, 50 VUs com 403 req/s, cerca de 4× a carga de projeto.
 - **Acima do teto, o final degrada pior nas escritas**, e houve 2 erros 5xx em cerca de 40 mil requests no estágio de 100 VUs (`Lock wait timeout`, depois de 5 s).
 
-## Contenção de escrita
+### Contenção de escrita
 
 - Com a API saturada, os 24 workers mantêm mais transações abertas ao mesmo tempo. Quem segura o lock de uma linha espera CPU para chegar ao commit, e as escritas no mesmo pedido fazem fila atrás dele.
 - No stress, o MySQL registrou 8.102 esperas de lock, com média de 185 ms e máximo de 6 s.
@@ -76,7 +125,7 @@ Valem ainda: erros < 0,1%, CPU ≤ 70% e notificação ponta a ponta com p95 ≤
 - Na carga de projeto, isso quase não aparece: cerca de 100 esperas em 2 min, com média de 31–52 ms.
 - O `innodb_lock_wait_timeout` de 5 s (ADR 0042) transforma uma espera longa em erro, em vez de prender o worker indefinidamente.
 
-## Atribuição (capacity de 2 min, API em 6 threads)
+### Atribuição (capacity de 2 min, API em 6 threads)
 
 Rodadas curtas, com ruído de ±10–15% entre execuções iguais.
 
@@ -105,7 +154,7 @@ Rodadas curtas, com ruído de ±10–15% entre execuções iguais.
 
 A serialização em PHP puro era o maior custo. Com o export em lote sem a extensão, cada lote de milhares de spans prendia o worker por segundos, daí o p99 de 3,4 s.
 
-## Idas por request (cache quente)
+### Idas por request (cache quente)
 
 Travadas no `RoundTripsPerRequestTest`:
 
@@ -121,14 +170,14 @@ Dois cortes possíveis ficaram de fora (ADR 0042):
 - os nomes do solicitante e de quem decidiu numa query só;
 - o `GET` do cache que sempre dá miss na releitura depois de uma escrita.
 
-## Smoke e concorrência
+### Smoke e concorrência
 
 | Cenário | Resultado |
 |---|---|
 | Smoke (1 VU, 30 s) | 100% dos checks, p95 de 25 ms |
 | Concorrência (20 admins × 50 pedidos) | 50 vitórias, 950 conflitos (409/412), 0 status inesperados, todos os pedidos na versão 2 |
 
-## Primeira rodada (antes das metas)
+### Primeira rodada (antes das metas)
 
 Feita sem CPU pinada, com 12 workers e a régua antiga (p95 < 200 ms com 50 VUs):
 
@@ -141,18 +190,4 @@ Feita sem CPU pinada, com 12 workers e a régua antiga (p95 < 200 ms com 50 VUs)
 
 - **Alpine × Debian:** a Debian ficou 10% abaixo em req/s. Pela regra do ADR 0039 (troca só com mais de 15% de ganho), **a imagem continua Alpine**.
 - **Commit:** 12 ms de mediana (p95 de 20 ms) com 2 fsyncs no primário; 0,12 ms com o commit relaxado, que fica só como comparação.
-- **Consumidor:** cerca de 8 mensagens/s com 1 processo e 47/s com 4, sem duplicar nada graças ao inbox.
-
-## Como reproduzir
-
-```sh
-make up && make load-seed
-# no .env: APP_CPUSET=0-2,6-8, K6_CPUSET=5,11, BACKING_CPUSET=3-4,9-10 (ajuste para a sua CPU)
-NOTIFICATION_CONSUMERS=4 make obs-measure
-make load-reset && make load-load RUN=minha-rodada && make load-pipeline
-make load-reset && make load-capacity RUN=minha-rodada
-make load-reset && make load-stress RUN=minha-rodada
-make load-concurrency && make load-smoke
-```
-
-Os resumos brutos ficam em `build/load/<cenário>-<rótulo>.json` (fora do git). Para medir o custo do SDK, troque o `make obs-measure` por `make obs`.
+- **Consumidor:** cerca de 8 mensagens/s com 1 processo e 47/s com 4, sem duplicar nada graças ao registro de eventos processados.

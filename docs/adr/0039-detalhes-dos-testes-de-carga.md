@@ -53,7 +53,7 @@ A fase 07 mede o serviço com o k6. O ADR 0018 fixa os quatro cenários e os thr
   - o commit isolado com o MySQL relaxado (`DB_SYNC_BINLOG=0` e `DB_FLUSH_LOG_AT_TRX_COMMIT=2`).
   Repetir rodadas para tirar a mediana ficou fora por causa do tempo. Os resultados trazem a variação observada entre execuções.
 - As rodadas usam 4 processos consumidores. Um único consumidor entrega cerca de 8 mensagens/s, contra cerca de 40 decisões/s no load. O padrão do compose é 2 (`NOTIFICATION_CONSUMERS`), e a fila quorum distribui as mensagens entre eles. O inbox garante que não haja entrega duplicada.
-- Os números ficam em [docs/load/resultados.md](../load/resultados.md).
+- Os números ficam em [docs/testes-de-carga.md](../testes-de-carga.md).
 
 ### Alpine × Debian
 - A variante Debian (`docker/debian/Dockerfile`, serviço `app-debian` no perfil `debian`) tem as mesmas extensões e configurações. Ela sobe só para a comparação (`make load-debian-up`, e os cenários com `TARGET=debian`).

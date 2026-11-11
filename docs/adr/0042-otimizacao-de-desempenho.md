@@ -61,7 +61,7 @@ O ADR 0041 fixou as metas e a carga de projeto. A leitura do código e da primei
 - **Linha de base:** load, capacity e stress com o código anterior à otimização e os instrumentos acima.
 - **Atribuição:** um capacity de 1 min a cada otimização ligada, para saber quanto cada uma contribui.
 - **Final:** load, capacity e stress com tudo ligado, a rodada com e sem réplica e o capacity com o SDK ligado para o custo da observabilidade.
-- Os resultados ficam em `docs/load/resultados.md`, com a % de melhoria de cada métrica sobre a linha de base.
+- Os resultados ficam em `docs/testes-de-carga.md`, com a % de melhoria de cada métrica sobre a linha de base.
 
 ## Consequências
 - Uma troca de papel fora do comando que apaga a chave (por exemplo, um `UPDATE` direto no banco) só vale quando a chave expira.
