@@ -45,9 +45,16 @@
         <env name="QUEUE_CONNECTION" value="sync" force="true"/>
         <env name="SESSION_DRIVER" value="array" force="true"/>
         <env name="MAIL_MAILER" value="array" force="true"/>
-        <env name="BROADCAST_CONNECTION" value="null" force="true"/>
+        <env name="BROADCAST_CONNECTION" value="reverb" force="true"/>
+        <env name="REVERB_APP_ID" value="test-app" force="true"/>
+        <env name="REVERB_APP_KEY" value="test-key" force="true"/>
+        <env name="REVERB_APP_SECRET" value="test-secret" force="true"/>
+        <env name="REVERB_HOST" value="127.0.0.1" force="true"/>
+        <env name="REVERB_PORT" value="1" force="true"/>
+        <env name="REVERB_SCHEME" value="http" force="true"/>
         <env name="REDIS_DB" value="1" force="true"/>
         <env name="REDIS_CACHE_DB" value="2" force="true"/>
         <env name="TRAVEL_REQUEST_EVENTS_EXCHANGE" value="travel_request.events.test" force="true"/>
+        <env name="NOTIFICATION_QUEUE" value="notification.travel_request.test" force="true"/>
     </php>
 </phpunit>
