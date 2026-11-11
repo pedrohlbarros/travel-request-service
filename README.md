@@ -12,6 +12,8 @@ O projeto inclui também:
 
 As decisões de arquitetura estão registradas em [docs/adr](docs/adr/README.md), e o detalhe da arquitetura em [docs/arquitetura.md](docs/arquitetura.md).
 
+![Página de notificações recebendo uma decisão ao vivo](docs/images/notification.png)
+
 ## Tecnologias
 
 - **Runtime:** PHP 8.5, Laravel 13, Octane + Swoole 6.2
@@ -70,6 +72,8 @@ PHP, Composer e as demais dependências rodam dentro dos containers.
    make demo
    ```
 
+   ![Saída do make demo](docs/images/make-demo.png)
+
 Todos os comandos disponíveis estão em [docs/comandos.md](docs/comandos.md).
 
 ## Perfis do Docker Compose
@@ -95,6 +99,10 @@ Todos os comandos disponíveis estão em [docs/comandos.md](docs/comandos.md).
 | Prometheus | Métricas | http://localhost:9090 | `make obs` |
 | Diagramas | Arquitetura em C4 (LikeC4), com os fluxos passo a passo | http://localhost:5173 | `make docs` |
 
+Como os serviços conversam no fluxo de aprovação, da decisão do admin à notificação do solicitante:
+
+![Fluxo de aprovação entre os serviços](docs/images/servicos.png)
+
 ## Testes e qualidade
 
 ```sh
@@ -116,6 +124,8 @@ A régua, que quebra o build no CI:
 - PHPStan no nível max, sem baseline;
 - complexidade cognitiva até 9 por função;
 - nenhuma violação de arquitetura.
+
+![Saída do make qa: testes e cobertura](docs/images/make-qa.png)
 
 Os detalhes estão no [guia de testes](docs/testes.md), e os cenários, as metas e os resultados de carga em [docs/testes-de-carga.md](docs/testes-de-carga.md).
 
