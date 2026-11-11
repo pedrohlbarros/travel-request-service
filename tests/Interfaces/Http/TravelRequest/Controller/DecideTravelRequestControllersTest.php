@@ -7,8 +7,10 @@ namespace Tests\Interfaces\Http\TravelRequest\Controller;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Infrastructure\Shared\Messaging\Outbox\OutboxDomainEventPublisher;
+use OpenTelemetry\API\Trace\SpanKind;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Support\LaravelTestCase;
+use Tests\Support\Shared\Observability\CapturesTelemetry;
 use Tests\Support\TravelRequest\CallsTravelRequestApi;
 
 /**
@@ -17,6 +19,7 @@ use Tests\Support\TravelRequest\CallsTravelRequestApi;
 final class DecideTravelRequestControllersTest extends LaravelTestCase
 {
     use CallsTravelRequestApi;
+    use CapturesTelemetry;
     use RefreshDatabase;
 
     private const string APPROVE = '/approve';
@@ -57,6 +60,12 @@ final class DecideTravelRequestControllersTest extends LaravelTestCase
         ];
     }
 
+    protected function tearDown(): void
+    {
+        $this->releaseTelemetry();
+        parent::tearDown();
+    }
+
     #[DataProvider('decisions')]
     public function test_AdminDecidesARequestedTravelRequest(string $action, string $decidedStatus): void
     {
@@ -80,11 +89,42 @@ final class DecideTravelRequestControllersTest extends LaravelTestCase
         $outboxRow = $this->app->make(ConnectionInterface::class)
             ->table(OutboxDomainEventPublisher::TABLE)
             ->first(['routing_key', 'headers']);
+        \assert($outboxRow !== null && \is_string($outboxRow->headers));
+        $headers = json_decode($outboxRow->headers, true);
 
-        self::assertNotNull($outboxRow);
         self::assertSame("travel_request.{$decidedStatus}.v1", $outboxRow->routing_key);
-        self::assertIsString($outboxRow->headers);
-        self::assertSame(['traceparent' => self::TRACEPARENT], json_decode($outboxRow->headers, true));
+        self::assertIsArray($headers);
+        self::assertSame(self::TRACEPARENT, $headers['traceparent']);
+        self::assertIsString($headers['x-request-id']);
+    }
+
+    public function test_WithTracingOnTheEventIsAChildOfTheRequestSpan(): void
+    {
+        $this->captureTelemetry();
+        $this->withHeader('traceparent', self::TRACEPARENT);
+
+        $this->writeAs(token: $this->adminToken, path: $this->path . self::APPROVE, ifMatch: '"1"');
+
+        $serverSpans = [];
+
+        foreach ($this->capturedSpans() as $span) {
+            if ($span->getKind() === SpanKind::KIND_SERVER) {
+                $serverSpans[] = $span;
+            }
+        }
+
+        $headers = $this->app->make(ConnectionInterface::class)
+            ->table(OutboxDomainEventPublisher::TABLE)
+            ->value('headers');
+        \assert(\is_string($headers));
+        $storedHeaders = json_decode($headers, true);
+        \assert(\is_array($storedHeaders));
+        $traceparent = $storedHeaders['traceparent'] ?? null;
+
+        self::assertCount(1, $serverSpans);
+        self::assertSame('4bf92f3577b34da6a3ce929d0e0e4736', $serverSpans[0]->getTraceId());
+        self::assertIsString($traceparent);
+        self::assertStringContainsString('-' . $serverSpans[0]->getSpanId() . '-', $traceparent);
     }
 
     #[DataProvider('decisions')]
