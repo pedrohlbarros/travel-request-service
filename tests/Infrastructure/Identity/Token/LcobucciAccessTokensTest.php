@@ -11,6 +11,11 @@ use Domain\Identity\ValueObject\UserId;
 use Infrastructure\Identity\Token\JwtKeyPair;
 use Infrastructure\Identity\Token\JwtSettings;
 use Infrastructure\Identity\Token\LcobucciAccessTokens;
+use Lcobucci\JWT\Encoding\ChainedFormatter;
+use Lcobucci\JWT\Encoding\JoseEncoder;
+use Lcobucci\JWT\Signer\Key\InMemory;
+use Lcobucci\JWT\Signer\Rsa\Sha256;
+use Lcobucci\JWT\Token\Builder;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Support\Identity\Fixture\IdentityMother as Mother;
 use Tests\Support\Identity\JwtSegments;
@@ -27,6 +32,8 @@ final class LcobucciAccessTokensTest extends LaravelTestCase
     private const string EXPIRES_AT = '2026-11-09 10:15:00';
 
     private const string UNUSED_PATH = 'unused';
+
+    private const string KEY_ID_HEADER = 'kid';
 
     public function test_VerifiesWhatItIssued(): void
     {
@@ -163,6 +170,26 @@ final class LcobucciAccessTokensTest extends LaravelTestCase
 
         $this->tokens()
             ->verify(token: $foreignIssued->token, now: Mother::moment());
+    }
+
+    public function test_RejectsAValidlySignedTokenWithoutASubject(): void
+    {
+        $keys = $this->signingKeys();
+        $tokenWithoutSubject = Builder::new(new JoseEncoder(), ChainedFormatter::withUnixTimestampDates())
+            ->withHeader(self::KEY_ID_HEADER, $keys->keyId)
+            ->issuedBy(self::ISSUER)
+            ->permittedFor(self::AUDIENCE)
+            ->identifiedBy(SequentialIdentifierGenerator::nth(sequence: 1))
+            ->issuedAt(Mother::moment())
+            ->canOnlyBeUsedAfter(Mother::moment())
+            ->expiresAt(Mother::moment(moment: self::EXPIRES_AT))
+            ->getToken(new Sha256(), InMemory::plainText($keys->privateKeyPem));
+
+        $this->expectException(InvalidAccessToken::class);
+        $this->expectExceptionMessageIs('The access token is not valid: it lacks sub, jti or exp.');
+
+        $this->tokens()
+            ->verify(token: $tokenWithoutSubject->toString(), now: Mother::moment());
     }
 
     /**
