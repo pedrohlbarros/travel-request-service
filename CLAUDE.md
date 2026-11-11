@@ -1,6 +1,6 @@
 # travel-request-service
 
-Microsserviço em Laravel para gestão de pedidos de viagem corporativa. É um teste técnico; o enunciado original está em [docs/desafio.md](docs/desafio.md).
+Microsserviço em Laravel para gestão de pedidos de viagem corporativa, feito como teste técnico.
 
 ## Como trabalhar neste repo
 
