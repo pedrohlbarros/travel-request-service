@@ -1,6 +1,6 @@
 # Fase 09 — Frontend (opcional)
 
-- **Status:** Proposto — só se houver tempo
+- **Status:** Substituída pela fase 08: a página de notificações (`/docs/notifications`) cumpre o papel do frontend opcional (ADR 0044)
 - **ADRs:** 0009, 0010, 0020
 
 ## Objetivo

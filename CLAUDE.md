@@ -14,7 +14,7 @@ Microsserviço em Laravel para gestão de pedidos de viagem corporativa. É um t
 - **Toda fase termina com validação e aprovação manual do usuário.** Ao final: rodar `make qa`, apresentar o roteiro de validação manual do plano (comandos e o que observar) e **parar**. A próxima fase só começa depois do "aprovado" explícito. Registrar a aprovação no plano (status + data).
 - **Decisões registradas viram ADR** em `docs/adr/`. Mudou uma decisão? ADR novo que substitui o antigo.
 - **Idioma:** código (classes, métodos, rotas, enums, colunas) em inglês; documentação (README, CLAUDE.md, ADRs, planos) em português.
-- **README.md enxuto:** só o que o enunciado pede + prints. Detalhes vão para `docs/` (ADR 0013).
+- **README.md padrão e enxuto:** o que é o serviço, tecnologias, instalação, perfis, serviços, testes e qualidade, links e autor. Detalhes em `docs/arquitetura.md`, `docs/comandos.md`, `docs/testes.md` e `docs/testes-de-carga.md` (ADR 0043).
 
 ## Decisões vigentes (resumo — fonte da verdade: `docs/adr/`)
 
@@ -28,7 +28,7 @@ Microsserviço em Laravel para gestão de pedidos de viagem corporativa. É um t
 | Concorrência | `version` + `ETag`/`If-Match`: sem header 428, divergente 412, regra de estado 409, pedido alheio 404, ação admin por user 403 | [0006](docs/adr/0006-concorrencia-versionamento-otimista.md) |
 | Mensageria | Outbox + relay polling (`SKIP LOCKED`, confirms); exchange topic `travel_request.events`, keys `travel_request.<evento>.v1`; CloudEvents gordo + `traceparent`; filas quorum; inbox table; retry com backoff + DLQ | [0007](docs/adr/0007-mensageria-rabbitmq-e-outbox.md) |
 | Redis | Fila de jobs, cache (detalhe por ID + listas por geração), blacklist de JWT, rate limit **só em auth** (proposital, por causa da carga) | [0008](docs/adr/0008-papeis-do-redis.md) |
-| Docker | Sem perfil: app, MySQL, Redis, RabbitMQ, Mailpit, Reverb e workers. Perfis `obs`, `load` (k6), `web` (frontend opcional) | [0009](docs/adr/0009-infra-docker-e-perfis.md) |
+| Docker | Sem perfil: app, MySQL, Redis, RabbitMQ, Mailpit, Reverb e workers. Perfis `obs`, `load` (k6), `docs` (diagramas, [0043](docs/adr/0043-documentacao-da-entrega.md)); o perfil `web` saiu ([0044](docs/adr/0044-pagina-de-notificacoes.md)) | [0009](docs/adr/0009-infra-docker-e-perfis.md) |
 | Observabilidade | OTel + Jaeger + Prometheus + Grafana (+ Loki, [0038](docs/adr/0038-detalhes-da-observabilidade.md)); frontend opcional para trace ponta a ponta | [0010](docs/adr/0010-observabilidade.md) |
 | Qualidade | PHPUnit, Infection, k6; cobertura e MSI em 100% ([0035](docs/adr/0035-cobertura-e-msi-em-100.md)) | [0011](docs/adr/0011-qualidade-e-testes.md) |
 | Destino | String no pedido | [0012](docs/adr/0012-destino-como-string.md) |
@@ -43,12 +43,13 @@ Microsserviço em Laravel para gestão de pedidos de viagem corporativa. É um t
 | Mensageria (detalhes) | Port `Transaction` (aprovar/cancelar); cache invalidado após commit; `OutboxDomainEventPublisher` genérico + mapper por context (tag); `outbox_messages`; CloudEvents estruturado; `traceparent` recebido; relay 200 ms → 2 s, lote 100, `--once`; `messaging:tap`/`outbox:status` | [0036](docs/adr/0036-detalhes-da-mensageria.md) |
 | Notification (detalhes) | Consumidor síncrono: inbox + database + mail na mesma transação, broadcast best effort após commit; `NotifiableRecipient` do evento gordo; `notifications` própria em `BINARY(16)`; retry 10 s/1 min/5 min + DLQ com motivo; textos pt-BR; Reverb em canal privado `users.{id}` com JWT; `GET /notifications` (cursor, `unread`), `POST .../read` idempotente | [0037](docs/adr/0037-detalhes-do-notification.md) |
 | Observabilidade (detalhes) | OTel porta única via Collector (traces → Jaeger, métricas → Prometheus, logs → Loki); auto Laravel + spans manuais em `Telemetry`; trace pai-filho HTTP → outbox → publish → consume; métricas cumulativas por `service.instance.id`; flush por unidade (métricas a cada 10 s); `HealthCheckSampler`; `make obs`/`obs-down` ligam/desligam o SDK; 4xx como warning | [0038](docs/adr/0038-detalhes-da-observabilidade.md) |
-| Carga (detalhes) | k6 em `tests/Load` (smoke, load, capacity, stress, concorrência 20×50); `make load-seed`/`load-reset`/`load-pipeline`; remote write + dashboard k6; rodada única; smoke e concorrência no CI | [0039](docs/adr/0039-detalhes-dos-testes-de-carga.md) |
+| Carga (detalhes) | k6 em `tests/Load`, resultados em `docs/testes-de-carga.md` (smoke, load, capacity, stress, concorrência 20×50); `make load-seed`/`load-reset`/`load-pipeline`; remote write + dashboard k6; rodada única; smoke e concorrência no CI | [0039](docs/adr/0039-detalhes-dos-testes-de-carga.md) |
 | Réplica de leitura | `mysql-replica` por GTID; conexão read/write com sticky; repositórios e miss do cache leem do primário; readiness `mysql_replica` e gauge de defasagem; `make db-replica-sync` | [0040](docs/adr/0040-replica-de-leitura.md) |
 | Metas e carga | Leitura p95 ≤ 150/p99 ≤ 300 ms, escrita p95 ≤ 250/p99 ≤ 500 ms, erros < 0,1%, CPU ≤ 70% na carga de projeto de 100 req/s (load por taxa constante), capacity 50 VUs, teto pela meta de leitura, pipeline p95 ≤ 5 s, SDK ≤ 10% | [0041](docs/adr/0041-metas-de-desempenho-e-carga-de-projeto.md) |
 | Otimização | `APP_CPUSET`/`K6_CPUSET`/`BACKING_CPUSET`; cAdvisor no `obs`; cache do papel (`UserRoles`); timeouts MySQL/Redis; `OCTANE_WORKERS=24`; SDK com protobuf, export em lote e só HTTP+query (`OTEL_PHP_DISABLED_INSTRUMENTATIONS=laravel`); réplica sem binlog próprio | [0042](docs/adr/0042-otimizacao-de-desempenho.md) |
 | CI | GitHub Actions builda a imagem e roda `make up` + `make qa` via compose (sem `services:`) | [0021](docs/adr/0021-ci-com-docker-compose.md) |
-| Docs | Planos + ADRs + diagramas; README enxuto | [0013](docs/adr/0013-documentacao.md) |
+| Docs | Planos + ADRs; README padrão e enxuto; documentos dedicados de arquitetura, comandos, testes e carga; `make demo`, coleção `.http` e OpenAPI exportado | [0043](docs/adr/0043-documentacao-da-entrega.md) |
+| Página de notificações | `/docs/notifications` (local) no lugar do frontend opcional: login com contas de demo, lista, não lidas e chegada ao vivo pelo Reverb | [0044](docs/adr/0044-pagina-de-notificacoes.md) |
 | Padrões | Código, Application (CQRS leve), API, IDs, testes, automação | 0014–0019 |
 
 ## Portas e ambiente
