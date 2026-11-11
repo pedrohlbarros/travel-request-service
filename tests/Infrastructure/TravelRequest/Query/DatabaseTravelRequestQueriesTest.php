@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Infrastructure\TravelRequest\Query;
 
-use Application\TravelRequest\Exception\InvalidListCursor;
+use Application\Shared\Exception\InvalidListCursor;
 use Application\TravelRequest\Input\TravelRequestFilters;
 use Application\TravelRequest\Output\TravelRequestOutput;
 use Application\TravelRequest\Output\TravelRequestPage;
@@ -15,9 +15,9 @@ use Domain\TravelRequest\Exception\TravelRequestNotFound;
 use Domain\TravelRequest\ValueObject\TravelRequestId;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Infrastructure\Shared\Query\ListCursor;
 use Infrastructure\TravelRequest\Persistence\EloquentTravelRequestRepository;
 use Infrastructure\TravelRequest\Query\DatabaseTravelRequestQueries;
-use Infrastructure\TravelRequest\Query\ListCursor;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Support\LaravelTestCase;
 use Tests\Support\TravelRequest\Fixture\StoresFixtureUsers;

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Application\TravelRequest\Exception;
+namespace Application\Shared\Exception;
 
 use InvalidArgumentException;
 

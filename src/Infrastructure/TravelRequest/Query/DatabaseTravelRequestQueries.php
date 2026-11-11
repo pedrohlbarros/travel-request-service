@@ -14,6 +14,8 @@ use Domain\TravelRequest\Exception\TravelRequestNotFound;
 use Domain\TravelRequest\ValueObject\TravelRequestId;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Infrastructure\Shared\Persistence\BinaryUuid;
+use Infrastructure\Shared\Query\ListCursor;
+use Infrastructure\Shared\Query\ListDirection;
 use Infrastructure\TravelRequest\Persistence\TravelRequestModel;
 use Infrastructure\TravelRequest\Persistence\TravelRequestRows;
 
@@ -57,7 +59,7 @@ final readonly class DatabaseTravelRequestQueries implements TravelRequestQuerie
         $query = $this->filtered(criteria: $criteria);
 
         if ($cursor !== null) {
-            $edgeIdBytes = BinaryUuid::toBytes(uuid: $cursor->edgeId->toString());
+            $edgeIdBytes = BinaryUuid::toBytes(uuid: $cursor->edgeId->value);
             $query->where('id', $isGoingNewer ? '>' : '<', $edgeIdBytes);
         }
 

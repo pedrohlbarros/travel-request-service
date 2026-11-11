@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Tests\Infrastructure\TravelRequest\Query;
+namespace Tests\Infrastructure\Shared\Query;
 
-use Application\TravelRequest\Exception\InvalidListCursor;
-use Infrastructure\TravelRequest\Query\ListCursor;
-use Infrastructure\TravelRequest\Query\ListDirection;
+use Application\Shared\Exception\InvalidListCursor;
+use Infrastructure\Shared\Query\ListCursor;
+use Infrastructure\Shared\Query\ListDirection;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -24,7 +24,7 @@ final class ListCursorTest extends TestCase
         $decodedOlder = ListCursor::decode(encodedCursor: $olderCursor->encode());
         $decodedNewer = ListCursor::decode(encodedCursor: $newerCursor->encode());
 
-        self::assertSame(self::EDGE_ID, $decodedOlder->edgeId->toString());
+        self::assertSame(self::EDGE_ID, $decodedOlder->edgeId->value);
         self::assertSame(ListDirection::Older, $decodedOlder->direction);
         self::assertSame(ListDirection::Newer, $decodedNewer->direction);
     }
