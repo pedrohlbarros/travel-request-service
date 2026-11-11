@@ -21,7 +21,7 @@ Uma decisão por arquivo: contexto, decisão, consequências. Numeração sequen
 | [0015](0015-camada-application-cqrs.md) | Casos de uso: Command/Query + Handler, sem bus | Aceito (nomenclatura substituída por 0029) |
 | [0016](0016-convencoes-da-api.md) | API: /api/v1, ações de status, cursor, snake_case, RFC 9457, Scramble | Aceito |
 | [0017](0017-identificadores-uuidv7.md) | IDs UUIDv7 gerados no domínio | Aceito |
-| [0018](0018-padrao-de-testes.md) | Testes: espelho de src/, MySQL real, fakes, Infection MSI ≥ 90% | Aceito |
+| [0018](0018-padrao-de-testes.md) | Testes: espelho de src/, MySQL real, fakes, Infection MSI ≥ 90% | Aceito (metas substituídas por 0035) |
 | [0019](0019-automacao-de-qualidade.md) | Makefile, GitHub Actions, CaptainHook | Aceito (CI substituído por 0021) |
 | [0020](0020-canais-de-notificacao.md) | Canais de notificação: mail, database, broadcast (Reverb) | Aceito |
 | [0021](0021-ci-com-docker-compose.md) | CI com Docker Compose (substitui trecho de CI do 0019) | Aceito |
@@ -38,3 +38,4 @@ Uma decisão por arquivo: contexto, decisão, consequências. Numeração sequen
 | [0032](0032-fluxo-explicito-e-formato-de-chamadas.md) | Fluxo explícito e formato de chamadas: sem throw em expressão, ≤ 2 níveis de chamada, nomeados no nosso código, layout de argumentos por largura (120) e quantidade (4+), um `->` por linha (complementa 0026) | Aceito |
 | [0033](0033-detalhes-da-api-de-pedidos.md) | API de pedidos: PATCH parcial, ordem 404→412→409, ETag strong, Policies por papel, cache em decorators, cursor por `id` | Aceito (Resource sem nome e sem FK substituídos por 0034) |
 | [0034](0034-relacionamento-pedido-usuario.md) | Relacionamento pedido–usuário: FKs com `restrictOnDelete`, `RequesterModel` só leitura, `requester`/`decided_by` com nome na resposta | Aceito |
+| [0035](0035-cobertura-e-msi-em-100.md) | Cobertura de linhas, MSI e Covered MSI em 100%; trait de eventos no Domain\Shared; `\assert` para estreitar tipo (substitui as metas do 0018) | Aceito |

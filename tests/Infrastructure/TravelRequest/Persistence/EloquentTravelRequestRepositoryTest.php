@@ -13,6 +13,7 @@ use Domain\TravelRequest\ValueObject\TravelRequestId;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Infrastructure\TravelRequest\Persistence\EloquentTravelRequestRepository;
+use Infrastructure\TravelRequest\Persistence\TravelRequestModel;
 use Tests\Support\LaravelTestCase;
 use Tests\Support\TravelRequest\Fixture\StoresFixtureUsers;
 use Tests\Support\TravelRequest\Fixture\TravelRequestMother as Mother;
@@ -131,11 +132,42 @@ final class EloquentTravelRequestRepositoryTest extends LaravelTestCase
         self::assertSame(TravelRequestStatus::Approved, $stored->status);
     }
 
+    public function test_AWriterThatLosesTheRaceAfterReadingTheRowIsRejected(): void
+    {
+        $this->travelRequests->add(travelRequest: Mother::requested());
+        $travelRequest = $this->storedTravelRequest();
+        $this->approve(travelRequest: $travelRequest);
+        $this->letAnotherWriterCommitRightAfterTheRowIsRead();
+
+        $this->expectException(TravelRequestVersionMismatch::class);
+        $this->expectExceptionMessageIs('Travel request ' . Mother::TRAVEL_REQUEST_ID . ' is at version 2, not 1.');
+
+        $this->travelRequests->update(travelRequest: $travelRequest, loadedVersion: TravelRequest::FIRST_VERSION);
+    }
+
     public function test_UpdateOfAMissingTravelRequestFails(): void
     {
         $this->expectException(TravelRequestNotFound::class);
 
         $this->travelRequests->update(travelRequest: Mother::requested(), loadedVersion: TravelRequest::FIRST_VERSION);
+    }
+
+    /**
+     * The other writer slips in between the repository's version check and its conditional UPDATE.
+     */
+    private function letAnotherWriterCommitRightAfterTheRowIsRead(): void
+    {
+        $hasOtherWriterCommitted = false;
+        TravelRequestModel::retrieved(static function (TravelRequestModel $row) use (&$hasOtherWriterCommitted): void {
+            if ($hasOtherWriterCommitted) {
+                return;
+            }
+
+            $hasOtherWriterCommitted = true;
+            TravelRequestModel::query()
+                ->whereKey($row->getRawOriginal('id'))
+                ->increment('version');
+        });
     }
 
     private function approve(TravelRequest $travelRequest): void

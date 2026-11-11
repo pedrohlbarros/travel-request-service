@@ -7,7 +7,6 @@ namespace Infrastructure\Identity\Console;
 use Illuminate\Console\Command;
 use Infrastructure\Identity\Token\JwtKeyPair;
 use Infrastructure\Identity\Token\JwtSettings;
-use RuntimeException;
 
 final class GenerateJwtKeysCommand extends Command
 {
@@ -59,14 +58,16 @@ final class GenerateJwtKeysCommand extends Command
      */
     private function newKeyPair(): array
     {
-        $privateKeyPem = null;
+        // OpenSSL reports failures as warnings, which the framework raises as ErrorException,
+        // so the asserts only narrow types.
         $privateKey = openssl_pkey_new(['private_key_bits' => self::RSA_KEY_BITS, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
-        $isExported = $privateKey !== false && openssl_pkey_export($privateKey, $privateKeyPem);
-        $publicKeyPem = $privateKey === false ? false : (openssl_pkey_get_details($privateKey)['key'] ?? false);
-
-        if (! $isExported || ! \is_string($privateKeyPem) || ! \is_string($publicKeyPem)) {
-            throw new RuntimeException('OpenSSL could not generate an RSA key pair.');
-        }
+        \assert($privateKey !== false);
+        $privateKeyPem = null;
+        openssl_pkey_export($privateKey, $privateKeyPem);
+        $keyDetails = openssl_pkey_get_details($privateKey);
+        \assert($keyDetails !== false);
+        $publicKeyPem = $keyDetails['key'] ?? null;
+        \assert(\is_string($privateKeyPem) && \is_string($publicKeyPem));
 
         return [$privateKeyPem, $publicKeyPem];
     }
@@ -75,12 +76,12 @@ final class GenerateJwtKeysCommand extends Command
     {
         $directory = \dirname($path);
 
-        if (! is_dir($directory) && ! mkdir($directory, self::DIRECTORY_PERMISSIONS, true)) {
-            throw new RuntimeException(\sprintf('Could not create "%s".', $directory));
+        // The framework's error handler turns a failing filesystem call into an ErrorException.
+        if (! is_dir($directory)) {
+            mkdir($directory, self::DIRECTORY_PERMISSIONS, true);
         }
 
-        if (file_put_contents($path, $contents) === false || ! chmod($path, $permissions)) {
-            throw new RuntimeException(\sprintf('Could not write "%s".', $path));
-        }
+        file_put_contents($path, $contents);
+        chmod($path, $permissions);
     }
 }

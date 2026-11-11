@@ -1,6 +1,6 @@
 # 0018 — Padrão de testes
 
-- **Status:** Aceito
+- **Status:** Aceito (metas de MSI e cobertura substituídas por [0035](0035-cobertura-e-msi-em-100.md))
 - **Data:** 2026-11-09
 
 ## Decisão

@@ -100,9 +100,7 @@ final readonly class LcobucciAccessTokens implements AccessTokenIssuer, AccessTo
             throw InvalidAccessToken::because(reason: 'it is malformed');
         }
 
-        if (! $parsedToken instanceof Plain) {
-            throw InvalidAccessToken::because(reason: 'it is malformed');
-        }
+        \assert($parsedToken instanceof Plain);
 
         return $parsedToken;
     }

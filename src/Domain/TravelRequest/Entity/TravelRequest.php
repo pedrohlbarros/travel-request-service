@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Domain\TravelRequest\Entity;
 
 use DateTimeImmutable;
-use Domain\Shared\Event\DomainEvent;
+use Domain\Shared\Entity\RecordsDomainEvents;
 use Domain\TravelRequest\Enum\TravelRequestStatus;
 use Domain\TravelRequest\Event\TravelRequestApproved;
 use Domain\TravelRequest\Event\TravelRequestCancelled;
@@ -21,10 +21,9 @@ use Domain\TravelRequest\ValueObject\UserId;
 
 final class TravelRequest
 {
-    public const int FIRST_VERSION = 1;
+    use RecordsDomainEvents;
 
-    /** @var list<DomainEvent> */
-    private array $recordedEvents = [];
+    public const int FIRST_VERSION = 1;
 
     private function __construct(
         public readonly TravelRequestId $id,
@@ -161,7 +160,7 @@ final class TravelRequest
     {
         $this->decide(targetStatus: TravelRequestStatus::Approved, deciderId: $approverId, decidedAt: $approvedAt);
 
-        $this->recordedEvents[] = new TravelRequestApproved(
+        $this->record(event: new TravelRequestApproved(
             travelRequestId: $this->id,
             requesterId: $this->requesterId,
             approvedBy: $approverId,
@@ -169,7 +168,7 @@ final class TravelRequest
             period: $this->period,
             version: $this->version,
             occurredAt: $approvedAt,
-        );
+        ));
     }
 
     /**
@@ -179,7 +178,7 @@ final class TravelRequest
     {
         $this->decide(targetStatus: TravelRequestStatus::Cancelled, deciderId: $cancellerId, decidedAt: $cancelledAt);
 
-        $this->recordedEvents[] = new TravelRequestCancelled(
+        $this->record(event: new TravelRequestCancelled(
             travelRequestId: $this->id,
             requesterId: $this->requesterId,
             cancelledBy: $cancellerId,
@@ -187,18 +186,7 @@ final class TravelRequest
             period: $this->period,
             version: $this->version,
             occurredAt: $cancelledAt,
-        );
-    }
-
-    /**
-     * @return list<DomainEvent>
-     */
-    public function releaseEvents(): array
-    {
-        $releasedEvents = $this->recordedEvents;
-        $this->recordedEvents = [];
-
-        return $releasedEvents;
+        ));
     }
 
     /**

@@ -30,7 +30,7 @@ Microsserviço em Laravel para gestão de pedidos de viagem corporativa. É um t
 | Redis | Fila de jobs, cache (detalhe por ID + listas por geração), blacklist de JWT, rate limit **só em auth** (proposital, por causa da carga) | [0008](docs/adr/0008-papeis-do-redis.md) |
 | Docker | Sem perfil: app, MySQL, Redis, RabbitMQ, Mailpit, Reverb e workers. Perfis `obs`, `load` (k6), `web` (frontend opcional) | [0009](docs/adr/0009-infra-docker-e-perfis.md) |
 | Observabilidade | OTel + Jaeger + Prometheus + Grafana; frontend opcional para trace ponta a ponta | [0010](docs/adr/0010-observabilidade.md) |
-| Qualidade | PHPUnit, Infection, k6 | [0011](docs/adr/0011-qualidade-e-testes.md) |
+| Qualidade | PHPUnit, Infection, k6; cobertura e MSI em 100% ([0035](docs/adr/0035-cobertura-e-msi-em-100.md)) | [0011](docs/adr/0011-qualidade-e-testes.md) |
 | Destino | String no pedido | [0012](docs/adr/0012-destino-como-string.md) |
 | Notificação | Mail (Mailpit), database (in-app), broadcast (Reverb) | [0020](docs/adr/0020-canais-de-notificacao.md) |
 | Imagens | App `php:8.5-cli-alpine` + Swoole 6.2.x; MySQL 8.4, Redis 8.x, RabbitMQ 4.3-management, Mailpit v1.33; ressalva musl medida na fase 07 | [0022](docs/adr/0022-imagem-base-e-versoes.md) |
@@ -79,7 +79,7 @@ O worker é reaproveitado entre requests: nada de estado por request em singleto
 - `tests/` espelha `src/`: `Domain`, `Application` (suíte unit), `Infrastructure` (integration), `Interfaces/Http` (feature), mais `EndToEnd/` e `Support/`.
 - Nome: `test_` + PascalCase (`test_CannotCancelApprovedTravelRequest`).
 - MySQL real no Docker, sem SQLite. Fakes in-memory das ports em `tests/Support`; verificar estado, não chamadas.
-- Metas que quebram o build: Infection em Domain+Application com MSI ≥ 90% e Covered MSI ≥ 95%; cobertura global ≥ 85%.
+- Metas que quebram o build ([0035](docs/adr/0035-cobertura-e-msi-em-100.md)): Infection em Domain+Application com MSI e Covered MSI em 100%; cobertura de linhas global em 100%. Sem `@codeCoverageIgnore` nem mutante ignorado: ramo que só estreita tipo vira `\assert`, e falha de função do PHP que emite warning sobe como `ErrorException` do framework.
 - Toda mudança de comportamento vem com teste.
 
 ## Comandos ([0019](docs/adr/0019-automacao-de-qualidade.md))
