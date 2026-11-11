@@ -1,6 +1,6 @@
 # Fase 04 — Mensageria (Outbox + RabbitMQ)
 
-- **Status:** Aprovado para início
+- **Status:** Concluído (2026-11-10)
 - **ADRs:** 0007, 0009, 0017, 0034, 0036
 
 ## Objetivo
@@ -25,4 +25,4 @@ Eventos de domínio saindo de forma confiável para o RabbitMQ.
 3. Conferir payload (CloudEvent, `data` gordo) e headers (`traceparent`) da mensagem; `make relay-logs` mostra o warning do período sem broker.
 
 ## Aprovação
-- [ ] Aprovado pelo usuário em: ____
+- [x] Aprovado pelo usuário em: 2026-11-10
