@@ -92,13 +92,15 @@ O worker é reaproveitado entre requests: nada de estado por request em singleto
 
 ## Comandos ([0019](docs/adr/0019-automacao-de-qualidade.md))
 
-Tudo pelo `Makefile`, rodando dentro do container. O Makefile é o **catálogo completo** de ações: subir/derrubar, `make help` (lista os alvos por seção), listar IP/porta/URL de cada serviço, setup, criar usuários/admin, todas as suítes de teste, Infection, cenários de carga, perfis `obs`/`load`/`web`. Toda ação nova útil para validar ou testar ganha um alvo (`make up`, `test`, `lint`, `stan`, `arch`, `infection`, `load`, `qa`). Antes de declarar uma fase pronta, `make qa` precisa passar. CaptainHook: Pint + PHPStan no pre-commit; Conventional Commits (em inglês) no commit-msg. CI no GitHub Actions via Docker Compose, rodando o mesmo `make qa` (ADR 0021).
+Tudo pelo `Makefile`, rodando dentro do container. O Makefile é o **catálogo completo** de ações: subir/derrubar, `make help` (lista os alvos por seção), listar IP/porta/URL de cada serviço, setup, criar usuários/admin, todas as suítes de teste, Infection, cenários de carga, perfis `obs`/`load`/`docs`, `make demo` e `make web` (URL da página de notificações). Toda ação nova útil para validar ou testar ganha um alvo (`make up`, `test`, `lint`, `stan`, `arch`, `infection`, `load`, `qa`). Antes de declarar uma fase pronta, `make qa` precisa passar. CaptainHook: Pint + PHPStan no pre-commit; Conventional Commits (em inglês) no commit-msg. CI no GitHub Actions via Docker Compose, rodando o mesmo `make qa` (ADR 0021).
 
-## Em aberto
+## Estado
 
-- Nada além do que cada plano lista em "A decidir na fase" (ex.: fase 06, logs de erros 4xx esperados).
+- Fases 00 a 08 concluídas e mergeadas; a fase 09 (frontend opcional) foi substituída pela página de notificações (ADR 0044).
+- Em aberto: nada; o README já tem os prints.
+- Mudanças a partir daqui seguem o fluxo de correção fora de fase (`fix/<descricao-em-ingles>`, tabela de commits e PR).
 
-## Para registrar na entrega (README ou doc linkado)
+## Registrado na entrega (`docs/arquitetura.md`, seção "Decisões e interpretações do enunciado")
 
 - Ambiguidades do enunciado: admin pode aprovar o próprio pedido; admin vê todos os pedidos (ADR 0003).
 - API autenticada sem rate limit de propósito, por causa dos testes de carga (ADR 0008).
