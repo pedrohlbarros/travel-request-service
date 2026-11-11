@@ -8,6 +8,7 @@ x-healthcheck: &healthcheck
 
 x-otel-environment: &otel-environment
   OTEL_PHP_AUTOLOAD_ENABLED: ${OTEL_PHP_AUTOLOAD_ENABLED:-true}
+  OTEL_PHP_DISABLED_INSTRUMENTATIONS: ${OTEL_PHP_DISABLED_INSTRUMENTATIONS:-laravel}
   OTEL_SDK_DISABLED: ${OTEL_SDK_DISABLED:-true}
   OTEL_RESOURCE_ATTRIBUTES: ${OTEL_RESOURCE_ATTRIBUTES:-deployment.environment.name=local}
   OTEL_PHP_DETECTORS: ${OTEL_PHP_DETECTORS:-host,process,service_instance}
@@ -20,9 +21,11 @@ x-otel-environment: &otel-environment
   OTEL_PROPAGATORS: ${OTEL_PROPAGATORS:-tracecontext,baggage}
   OTEL_TRACES_SAMPLER: ${OTEL_TRACES_SAMPLER:-parentbased_always_on}
   OTEL_METRIC_EXPORT_INTERVAL: ${OTEL_METRIC_EXPORT_INTERVAL:-10000}
+  OTEL_BSP_SCHEDULE_DELAY: ${OTEL_BSP_SCHEDULE_DELAY:-5000}
 
 services:
   app:
+    cpuset: "${APP_CPUSET:-}"
     build:
       context: .
       target: dev
@@ -30,9 +33,19 @@ services:
         UID: ${UID:-1000}
         GID: ${GID:-1000}
     image: travel-request-service/app:dev
+    command:
+      - php
+      - artisan
+      - octane:start
+      - --server=swoole
+      - --host=0.0.0.0
+      - --port=8000
+      - --workers=${OCTANE_WORKERS:-24}
+      - --max-requests=${OCTANE_MAX_REQUESTS:-500}
     environment:
       <<: *otel-environment
       DB_TEST_DATABASE: ${DB_TEST_DATABASE:-travel_request_testing}
+      DB_READ_HOST: ${APP_DB_READ_HOST:-mysql-replica}
       OTEL_SERVICE_NAME: travel-request-service
     ports:
       - "${FORWARD_APP_PORT:-8000}:8000"
@@ -40,6 +53,7 @@ services:
       - .:/var/www/html
     depends_on:
       mysql: { condition: service_healthy }
+      mysql-replica: { condition: service_healthy }
       redis: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
       mailpit: { condition: service_healthy }
@@ -48,11 +62,13 @@ services:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8000/health/live"]
 
   outbox-relay:
+    cpuset: "${BACKING_CPUSET:-}"
     image: travel-request-service/app:dev
     command: ["php", "artisan", "outbox:relay"]
     restart: unless-stopped
     environment:
       <<: *otel-environment
+      DB_READ_HOST: mysql
       OTEL_SERVICE_NAME: travel-request-outbox-relay
     stop_signal: SIGTERM
     volumes:
@@ -66,11 +82,15 @@ services:
       test: ["CMD", "pgrep", "-f", "outbox:relay"]
 
   notification-consumer:
+    cpuset: "${BACKING_CPUSET:-}"
     image: travel-request-service/app:dev
     command: ["php", "artisan", "notification:consume"]
     restart: unless-stopped
+    deploy:
+      replicas: ${NOTIFICATION_CONSUMERS:-2}
     environment:
       <<: *otel-environment
+      DB_READ_HOST: mysql
       OTEL_SERVICE_NAME: travel-request-notification
     stop_signal: SIGTERM
     volumes:
@@ -86,6 +106,7 @@ services:
       test: ["CMD", "pgrep", "-f", "notification:consume"]
 
   reverb:
+    cpuset: "${BACKING_CPUSET:-}"
     image: travel-request-service/app:dev
     command: ["php", "artisan", "reverb:start", "--debug"]
     restart: unless-stopped
@@ -102,7 +123,11 @@ services:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/up"]
 
   mysql:
+    cpuset: "${BACKING_CPUSET:-}"
     image: mysql:8.4
+    command:
+      - --sync-binlog=${DB_SYNC_BINLOG:-1}
+      - --innodb-flush-log-at-trx-commit=${DB_FLUSH_LOG_AT_TRX_COMMIT:-1}
     ports:
       - "${FORWARD_DB_PORT:-3306}:3306"
     environment:
@@ -114,11 +139,31 @@ services:
     volumes:
       - mysql-data:/var/lib/mysql
       - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
+      - ./docker/mysql/conf/primary.cnf:/etc/mysql/conf.d/zz-primary.cnf:ro
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+
+  mysql-replica:
+    cpuset: "${BACKING_CPUSET:-}"
+    image: mysql:8.4
+    command:
+      - --replicate-do-db=${DB_DATABASE:-travel_request}
+    ports:
+      - "${FORWARD_DB_REPLICA_PORT:-3307}:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+    volumes:
+      - mysql-replica-data:/var/lib/mysql
+      - ./docker/mysql/conf/replica.cnf:/etc/mysql/conf.d/zz-replica.cnf:ro
+    depends_on:
+      mysql: { condition: service_healthy }
     healthcheck:
       <<: *healthcheck
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
 
   redis:
+    cpuset: "${BACKING_CPUSET:-}"
     image: redis:8.10-alpine
     ports:
       - "${FORWARD_REDIS_PORT:-6379}:6379"
@@ -129,6 +174,7 @@ services:
       test: ["CMD", "redis-cli", "ping"]
 
   rabbitmq:
+    cpuset: "${BACKING_CPUSET:-}"
     image: rabbitmq:4.3-management
     hostname: rabbitmq
     ports:
@@ -146,6 +192,7 @@ services:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "check_port_connectivity"]
 
   mailpit:
+    cpuset: "${BACKING_CPUSET:-}"
     image: axllent/mailpit:v1.33
     ports:
       - "${FORWARD_MAILPIT_SMTP_PORT:-1025}:1025"
@@ -155,6 +202,7 @@ services:
       test: ["CMD", "/mailpit", "readyz"]
 
   otel-collector:
+    cpuset: "${BACKING_CPUSET:-}"
     image: otel/opentelemetry-collector-contrib:0.165.0
     profiles: [obs]
     command: ["--config=/etc/otelcol-contrib/config.yaml"]
@@ -165,21 +213,27 @@ services:
       loki: { condition: service_started }
 
   jaeger:
+    cpuset: "${BACKING_CPUSET:-}"
     image: jaegertracing/jaeger:2.23.0
     profiles: [obs]
     ports:
       - "${FORWARD_JAEGER_UI_PORT:-16686}:16686"
 
   prometheus:
+    cpuset: "${BACKING_CPUSET:-}"
     image: prom/prometheus:v3.16.0
     profiles: [obs]
-    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=2d"]
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=2d
+      - --web.enable-remote-write-receiver
     ports:
       - "${FORWARD_PROMETHEUS_PORT:-9090}:9090"
     volumes:
       - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
 
   loki:
+    cpuset: "${BACKING_CPUSET:-}"
     image: grafana/loki:3.6.20
     profiles: [obs]
     command: ["-config.file=/etc/loki/local-config.yaml"]
@@ -187,6 +241,7 @@ services:
       - "${FORWARD_LOKI_PORT:-3100}:3100"
 
   grafana:
+    cpuset: "${BACKING_CPUSET:-}"
     image: grafana/grafana:13.2.6
     profiles: [obs]
     environment:
@@ -205,7 +260,74 @@ services:
       loki: { condition: service_started }
       jaeger: { condition: service_started }
 
+  cadvisor:
+    cpuset: "${BACKING_CPUSET:-}"
+    image: ghcr.io/google/cadvisor:v0.60.6
+    profiles: [obs]
+    privileged: true
+    command:
+      - --docker_only=true
+      - --housekeeping_interval=5s
+      - --enable_metrics=cpu,memory
+      - --store_container_labels=false
+      - --whitelisted_container_labels=com.docker.compose.service,com.docker.compose.project
+    devices:
+      - /dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+
+  app-debian:
+    cpuset: "${APP_CPUSET:-}"
+    build:
+      context: .
+      dockerfile: docker/debian/Dockerfile
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    image: travel-request-service/app:debian
+    profiles: [debian]
+    command:
+      - php
+      - artisan
+      - octane:start
+      - --server=swoole
+      - --host=0.0.0.0
+      - --port=8000
+      - --workers=${OCTANE_WORKERS:-24}
+      - --max-requests=${OCTANE_MAX_REQUESTS:-500}
+    environment:
+      <<: *otel-environment
+      DB_READ_HOST: ${APP_DB_READ_HOST:-mysql-replica}
+      OTEL_SERVICE_NAME: travel-request-service-debian
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      mysql: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8000/health/live"]
+
+  k6:
+    cpuset: "${K6_CPUSET:-}"
+    image: grafana/k6:2.2.0
+    profiles: [load]
+    user: "${UID:-1000}:${GID:-1000}"
+    environment:
+      BASE_URL: ${LOAD_BASE_URL:-http://app:8000}
+      K6_PROMETHEUS_RW_SERVER_URL: http://prometheus:9090/api/v1/write
+      K6_PROMETHEUS_RW_TREND_STATS: p(95),p(99),min,max,avg
+    volumes:
+      - ./tests/Load:/scripts:ro
+      - ./build/load:/results
+
 volumes:
   mysql-data:
+  mysql-replica-data:
   redis-data:
   rabbitmq-data:

@@ -9,6 +9,7 @@ PHP     := $(EXEC) php
 
 FORWARD_APP_PORT          ?= 8000
 FORWARD_DB_PORT           ?= 3306
+FORWARD_DB_REPLICA_PORT   ?= 3307
 FORWARD_REDIS_PORT        ?= 6379
 FORWARD_RABBITMQ_PORT     ?= 5672
 FORWARD_RABBITMQ_UI_PORT  ?= 15672
@@ -20,9 +21,9 @@ FORWARD_JAEGER_UI_PORT    ?= 16686
 FORWARD_PROMETHEUS_PORT   ?= 9090
 FORWARD_LOKI_PORT         ?= 3100
 
-OBS_SERVICES := otel-collector jaeger prometheus loki grafana
+OBS_SERVICES := otel-collector jaeger prometheus loki grafana cadvisor
 
-SERVICES := app outbox-relay notification-consumer reverb mysql redis rabbitmq mailpit
+SERVICES := app outbox-relay notification-consumer reverb mysql mysql-replica redis rabbitmq mailpit
 
 ##@ Help
 
@@ -61,7 +62,8 @@ urls: ## Show container IP, host port and URL of each service
 		ip=$$( [ -n "$$id" ] && docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}' $$id | xargs || echo "not running"); \
 		case $$service in \
 			app)      host="localhost:$(FORWARD_APP_PORT)";   url="http://localhost:$(FORWARD_APP_PORT)/health/ready" ;; \
-			mysql)    host="localhost:$(FORWARD_DB_PORT)";    url="mysql://localhost:$(FORWARD_DB_PORT)/$(DB_DATABASE)" ;; \
+			mysql)    host="localhost:$(FORWARD_DB_PORT)";    url="mysql://localhost:$(FORWARD_DB_PORT)/$(DB_DATABASE) (primary)" ;; \
+			mysql-replica) host="localhost:$(FORWARD_DB_REPLICA_PORT)"; url="mysql://localhost:$(FORWARD_DB_REPLICA_PORT)/$(DB_DATABASE) (read replica)" ;; \
 			redis)    host="localhost:$(FORWARD_REDIS_PORT)"; url="redis://localhost:$(FORWARD_REDIS_PORT)" ;; \
 			rabbitmq) host="localhost:$(FORWARD_RABBITMQ_PORT)"; url="http://localhost:$(FORWARD_RABBITMQ_UI_PORT) (management UI)" ;; \
 			mailpit)  host="localhost:$(FORWARD_MAILPIT_SMTP_PORT)"; url="http://localhost:$(FORWARD_MAILPIT_UI_PORT) (web UI)" ;; \
@@ -78,13 +80,22 @@ urls: ## Show container IP, host port and URL of each service
 setup: ## First run: .env, build, start, dependencies, app key, migrations, JWT keys, git hooks
 	@[ -f .env ] || { cp .env.example .env; sed -i "s/^UID=.*/UID=$$(id -u)/; s/^GID=.*/GID=$$(id -g)/" .env; echo ".env created from .env.example"; }
 	@docker image inspect travel-request-service/app:dev >/dev/null 2>&1 || $(COMPOSE) build app
-	$(COMPOSE) up -d --wait mysql redis rabbitmq mailpit
+	$(COMPOSE) up -d --wait mysql mysql-replica redis rabbitmq mailpit
 	$(COMPOSE) run --rm --no-deps app composer install --no-interaction
 	@grep -q '^APP_KEY=base64' .env || $(COMPOSE) run --rm --no-deps app php artisan key:generate --ansi
 	$(COMPOSE) up -d --wait
 	$(PHP) artisan migrate --force
+	@$(MAKE) --no-print-directory db-replica-sync
 	$(PHP) artisan identity:keys:generate
 	$(EXEC) vendor/bin/captainhook install --only-enabled --force --no-interaction
+
+db-replica-sync: ## Rebuild the read replica from the primary and start replication (first run, or after it breaks)
+	COMPOSE="$(COMPOSE)" DB_ROOT_PASSWORD="$(DB_ROOT_PASSWORD)" DB_DATABASE="$(DB_DATABASE)" DB_USERNAME="$(DB_USERNAME)" \
+		DB_PASSWORD="$(DB_PASSWORD)" DB_REPLICATION_PASSWORD="$(DB_REPLICATION_PASSWORD)" sh docker/mysql/sync-replica.sh
+
+db-replica-status: ## Show whether the replica is replicating and how far behind it is
+	@$(COMPOSE) exec -T mysql-replica sh -c 'mysql -uroot -p"$$MYSQL_ROOT_PASSWORD" -e "SHOW REPLICA STATUS\G" 2>/dev/null' \
+		| grep -E 'Replica_IO_Running|Replica_SQL_Running|Seconds_Behind_Source|Last_.*Error:'
 
 shell: ## Open a shell in the app container
 	$(COMPOSE) exec app sh
@@ -149,9 +160,13 @@ mailpit: ## Print the Mailpit web UI URL
 
 ##@ Observability
 
-.PHONY: obs obs-down obs-urls
-obs: ## Start the obs profile (Collector, Jaeger, Prometheus, Loki, Grafana) and turn tracing on in app, relay and consumer
+.PHONY: obs obs-measure obs-down obs-urls
+obs: ## Start the obs profile (Collector, Jaeger, Prometheus, Loki, Grafana, cAdvisor) and turn tracing on in app, relay and consumer
 	OTEL_SDK_DISABLED=false $(COMPOSE) --profile obs up -d --wait
+	@$(MAKE) --no-print-directory obs-urls
+
+obs-measure: ## Start the obs profile with the app SDK off: only k6 and container metrics, for load measurements
+	OTEL_SDK_DISABLED=true $(COMPOSE) --profile obs up -d --wait
 	@$(MAKE) --no-print-directory obs-urls
 
 obs-down: ## Stop the obs profile and turn tracing off again
@@ -210,20 +225,61 @@ coverage: ## Every suite with line coverage; fails below 100%
 infection: ## Mutation testing on Domain + Application (MSI and covered MSI at 100%)
 	$(EXEC) vendor/bin/infection --no-progress --show-mutations
 
+##@ Load tests
+
+LOAD_RUN  := $(COMPOSE) --profile load run --rm $(if $(filter debian,$(TARGET)),-e BASE_URL=http://app-debian:8000,)
+K6_OUTPUT  = $(if $(shell $(COMPOSE) ps --status running -q prometheus 2>/dev/null),-o experimental-prometheus-rw,)
+K6_ENV     = -e RUN_LABEL=$(or $(RUN),local) $(if $(DURATION),-e DURATION=$(DURATION),) $(if $(VUS),-e VUS=$(VUS),) $(if $(LOAD_RATE),-e LOAD_RATE=$(LOAD_RATE),)
+
+.PHONY: load-seed load-reset load-smoke load-load load-capacity load-stress load-concurrency load-pipeline
+load-seed: ## Seed the load test users (load-user-NN, load-admin-NN) and ~10k travel requests
+	$(PHP) artisan db:seed --class='Infrastructure\Identity\Seeder\LoadTestUsersSeeder' --force
+	$(PHP) artisan db:seed --class='Infrastructure\TravelRequest\Seeder\LoadTestTravelRequestsSeeder' --force
+
+load-reset: ## Put the load test data back to the seeded state (drops their requests and notifications, published outbox rows and queued decisions)
+	$(COMPOSE) exec -T mysql sh -c 'mysql -uroot -p"$$MYSQL_ROOT_PASSWORD" "$$MYSQL_DATABASE" -e " \
+		DELETE n FROM notifications n JOIN users u ON u.id = n.notifiable_id WHERE u.email LIKE \"load-%\"; \
+		DELETE t FROM travel_requests t JOIN users u ON u.id = t.requester_id WHERE u.email LIKE \"load-user-%\"; \
+		DELETE FROM outbox_messages WHERE published_at IS NOT NULL;" 2>/dev/null'
+	@for queue in notification.travel_request notification.travel_request.retry.10s notification.travel_request.retry.1m notification.travel_request.retry.5m; do \
+		$(COMPOSE) exec -T rabbitmq rabbitmqctl purge_queue $$queue >/dev/null 2>&1 || true; \
+	done
+	$(PHP) artisan cache:clear
+	@$(MAKE) --no-print-directory load-seed
+
+load-smoke: ## Load test: smoke, 1 VU for 30 s (RUN=<label> names the result file; TARGET=debian hits app-debian)
+	@mkdir -p build/load
+	$(LOAD_RUN) k6 run $(K6_OUTPUT) $(K6_ENV) /scripts/smoke.js
+
+load-load: ## Load test: design load (~100 req/s) for 5 min against the latency and error targets (LOAD_RATE=<iterations/s>, DURATION=)
+	@mkdir -p build/load
+	$(LOAD_RUN) k6 run $(K6_OUTPUT) $(K6_ENV) /scripts/load.js
+
+load-capacity: ## Load test: 50 VUs as fast as the service answers, recording throughput and latency (VUS=, DURATION=)
+	@mkdir -p build/load
+	$(LOAD_RUN) k6 run $(K6_OUTPUT) $(K6_ENV) /scripts/capacity.js
+
+load-stress: ## Load test: ramp 50 -> 400 VUs in 2-min stages and report the ceiling (last stage within the read target)
+	@mkdir -p build/load
+	$(LOAD_RUN) k6 run $(K6_OUTPUT) $(K6_ENV) /scripts/stress.js
+
+load-concurrency: ## Load test: 20 admins decide each of 50 requests at once; exactly one wins
+	@mkdir -p build/load
+	$(LOAD_RUN) k6 run $(K6_OUTPUT) $(K6_ENV) /scripts/concurrency.js
+
+load-pipeline: ## Decision-to-notification latency of the load users (p50/p95/p99) and the messages still queued
+	@$(COMPOSE) exec -T mysql sh -c 'mysql -uroot -p"$$MYSQL_ROOT_PASSWORD" "$$MYSQL_DATABASE" 2>/dev/null' < tests/Load/pipeline-report.sql
+	@$(COMPOSE) exec -T rabbitmq rabbitmqctl list_queues -q name messages | grep notification.travel_request
+
+.PHONY: load-debian-up load-debian-down
+load-debian-up: ## Build and start the Debian (glibc) variant of the app, to compare it with Alpine under load
+	$(COMPOSE) --profile debian up -d --build --wait app-debian
+
+load-debian-down: ## Stop the Debian variant
+	$(COMPOSE) --profile debian rm -sf app-debian
+
 ##@ Not implemented yet
 
-.PHONY: load-smoke load-load load-stress load-concurrency web
-load-smoke: ## Load test: smoke (1 VU) (not implemented yet)
-	@echo "make $@: not implemented yet"
-
-load-load: ## Load test: expected load (not implemented yet)
-	@echo "make $@: not implemented yet"
-
-load-stress: ## Load test: ramp until it breaks (not implemented yet)
-	@echo "make $@: not implemented yet"
-
-load-concurrency: ## Load test: concurrent approve/cancel on the same request (not implemented yet)
-	@echo "make $@: not implemented yet"
-
+.PHONY: web
 web: ## Start the optional frontend profile (not implemented yet)
 	@echo "make $@: not implemented yet"
