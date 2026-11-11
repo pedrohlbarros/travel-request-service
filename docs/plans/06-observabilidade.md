@@ -1,6 +1,6 @@
 # Fase 06 — Observabilidade
 
-- **Status:** Aprovado para início
+- **Status:** Concluído (2026-11-11)
 - **ADRs:** 0009, 0010, 0022, 0023, 0036, 0038
 
 ## Objetivo
@@ -30,4 +30,4 @@ Trace ponta a ponta e métricas da aplicação no perfil `obs`.
 4. `make obs-down` e confirmar que a API, o relay e o consumidor seguem funcionando.
 
 ## Aprovação
-- [ ] Aprovado pelo usuário em: ____
+- [x] Aprovado pelo usuário em: 2026-11-11
