@@ -14,20 +14,295 @@
   "panels": [
     {
       "type": "row",
-      "title": "API",
-      "id": 1,
+      "title": "Metas",
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
         "y": 0
+      },
+      "id": 1
+    },
+    {
+      "type": "timeseries",
+      "title": "Leitura p95 / p99 (metas 150 / 300 ms)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.15
+              },
+              {
+                "color": "red",
+                "value": 0.3
+              }
+            ]
+          },
+          "custom": {
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_request_duration_seconds_bucket{http_request_method=\"GET\",http_route=~\".*(travel-requests|notifications).*\"}[5m])))",
+          "legendFormat": "p95",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_request_duration_seconds_bucket{http_request_method=\"GET\",http_route=~\".*(travel-requests|notifications).*\"}[5m])))",
+          "legendFormat": "p99",
+          "refId": "B"
+        }
+      ],
+      "description": "GET de pedidos e notificações.",
+      "id": 2
+    },
+    {
+      "type": "timeseries",
+      "title": "Escrita p95 / p99 (metas 250 / 500 ms)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 6,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.25
+              },
+              {
+                "color": "red",
+                "value": 0.5
+              }
+            ]
+          },
+          "custom": {
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_request_duration_seconds_bucket{http_request_method=~\"POST|PATCH\",http_route=~\".*travel-requests.*\"}[5m])))",
+          "legendFormat": "p95",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_request_duration_seconds_bucket{http_request_method=~\"POST|PATCH\",http_route=~\".*travel-requests.*\"}[5m])))",
+          "legendFormat": "p99",
+          "refId": "B"
+        }
+      ],
+      "description": "Criar, editar, aprovar e cancelar.",
+      "id": 3
+    },
+    {
+      "type": "timeseries",
+      "title": "Taxa de erro 5xx (meta < 0,1%)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 12,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0.001
+              }
+            ]
+          },
+          "custom": {
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~\"5..\"}[5m])) / sum(rate(http_server_request_duration_seconds_count[5m]))",
+          "legendFormat": "5xx",
+          "refId": "A"
+        }
+      ],
+      "description": "Respostas 5xx sobre o total. Os 4xx são erros do cliente e ficam no painel de 4xx e 5xx.",
+      "id": 4
+    },
+    {
+      "type": "timeseries",
+      "title": "Notificação ponta a ponta p95 / p99 (meta 5 s)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 18,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          },
+          "custom": {
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(notification_end_to_end_duration_seconds_bucket[5m])))",
+          "legendFormat": "p95",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(notification_end_to_end_duration_seconds_bucket[5m])))",
+          "legendFormat": "p99",
+          "refId": "B"
+        }
+      ],
+      "description": "Da decisão até a entrega da notificação, passando por outbox, relay, broker e retries. Precisão de 1 s.",
+      "id": 5
+    },
+    {
+      "type": "row",
+      "title": "API",
+      "id": 6,
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 9
       }
     },
     {
       "type": "timeseries",
       "title": "Requests por segundo, por rota",
-      "id": 2,
+      "id": 7,
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -36,7 +311,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 1
+        "y": 10
       },
       "fieldConfig": {
         "defaults": {
@@ -65,7 +340,7 @@
     {
       "type": "timeseries",
       "title": "Latência p50 / p95 / p99",
-      "id": 3,
+      "id": 8,
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -74,7 +349,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 1
+        "y": 10
       },
       "fieldConfig": {
         "defaults": {
@@ -121,7 +396,7 @@
     {
       "type": "timeseries",
       "title": "p95 / p99 por rota",
-      "id": 4,
+      "id": 9,
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -130,7 +405,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 9
+        "y": 18
       },
       "fieldConfig": {
         "defaults": {
@@ -168,7 +443,7 @@
     {
       "type": "timeseries",
       "title": "Respostas 4xx e 5xx por segundo",
-      "id": 5,
+      "id": 10,
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -177,7 +452,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 9
+        "y": 18
       },
       "fieldConfig": {
         "defaults": {
@@ -206,19 +481,19 @@
     {
       "type": "row",
       "title": "Pedidos de viagem",
-      "id": 6,
+      "id": 11,
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 17
+        "y": 26
       }
     },
     {
       "type": "timeseries",
       "title": "Pedidos criados (por minuto)",
-      "id": 7,
+      "id": 12,
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -227,7 +502,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 18
+        "y": 27
       },
       "fieldConfig": {
         "defaults": {
@@ -256,7 +531,7 @@
     {
       "type": "timeseries",
       "title": "Aprovações e cancelamentos (por minuto)",
-      "id": 8,
+      "id": 13,
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -265,7 +540,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 18
+        "y": 27
       },
       "fieldConfig": {
         "defaults": {
@@ -294,19 +569,19 @@
     {
       "type": "row",
       "title": "Mensageria",
-      "id": 9,
+      "id": 14,
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 26
+        "y": 35
       }
     },
     {
       "type": "timeseries",
       "title": "Outbox pendente",
-      "id": 10,
+      "id": 15,
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -315,7 +590,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 27
+        "y": 36
       },
       "fieldConfig": {
         "defaults": {
@@ -344,7 +619,7 @@
     {
       "type": "timeseries",
       "title": "Publicadas pelo relay (por segundo)",
-      "id": 11,
+      "id": 16,
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -353,7 +628,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 27
+        "y": 36
       },
       "fieldConfig": {
         "defaults": {
@@ -382,7 +657,7 @@
     {
       "type": "timeseries",
       "title": "Mensagens nas filas do Notification",
-      "id": 12,
+      "id": 17,
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -391,7 +666,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 27
+        "y": 36
       },
       "fieldConfig": {
         "defaults": {
@@ -420,7 +695,7 @@
     {
       "type": "stat",
       "title": "Dead letter queue",
-      "id": 13,
+      "id": 18,
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -429,7 +704,7 @@
         "h": 8,
         "w": 6,
         "x": 0,
-        "y": 35
+        "y": 44
       },
       "fieldConfig": {
         "defaults": {
@@ -458,7 +733,7 @@
     {
       "type": "timeseries",
       "title": "Entregas por resultado (por minuto)",
-      "id": 14,
+      "id": 19,
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -467,7 +742,7 @@
         "h": 8,
         "w": 9,
         "x": 6,
-        "y": 35
+        "y": 44
       },
       "fieldConfig": {
         "defaults": {
@@ -496,7 +771,7 @@
     {
       "type": "timeseries",
       "title": "Duração da entrega p95 / p99",
-      "id": 15,
+      "id": 20,
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -505,7 +780,7 @@
         "h": 8,
         "w": 9,
         "x": 15,
-        "y": 35
+        "y": 44
       },
       "fieldConfig": {
         "defaults": {
@@ -543,19 +818,124 @@
     {
       "type": "row",
       "title": "Runtime",
-      "id": 16,
+      "id": 21,
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 43
+        "y": 52
       }
     },
     {
       "type": "timeseries",
+      "title": "Defasagem da réplica MySQL",
+      "id": 22,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 16,
+        "x": 0,
+        "y": 53
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max(mysql_replica_lag_seconds)",
+          "legendFormat": "atraso",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Replicação",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 53
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Parada",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "Rodando",
+                  "color": "green"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "min(mysql_replica_running)",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "id": 23
+    },
+    {
+      "type": "timeseries",
       "title": "Memória por processo",
-      "id": 17,
+      "id": 24,
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -564,7 +944,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 44
+        "y": 61
       },
       "fieldConfig": {
         "defaults": {
@@ -593,7 +973,7 @@
     {
       "type": "timeseries",
       "title": "Requests por worker (por segundo)",
-      "id": 18,
+      "id": 25,
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -602,7 +982,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 44
+        "y": 61
       },
       "fieldConfig": {
         "defaults": {
@@ -630,20 +1010,174 @@
     },
     {
       "type": "row",
-      "title": "Logs",
-      "id": 19,
+      "title": "Containers",
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 52
+        "y": 69
+      },
+      "id": 26
+    },
+    {
+      "type": "timeseries",
+      "title": "CPU por serviço (núcleos em uso)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 70
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (compose_service) (rate(container_cpu_usage_seconds_total[1m]))",
+          "legendFormat": "{{compose_service}}",
+          "refId": "A"
+        }
+      ],
+      "id": 27
+    },
+    {
+      "type": "timeseries",
+      "title": "CPU da API e do host (meta ≤ 70%)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 70
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0.7
+              }
+            ]
+          },
+          "custom": {
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(rate(container_cpu_usage_seconds_total{compose_service=\"app\"}[1m])) / $app_cores",
+          "legendFormat": "API sobre os núcleos dela",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(rate(container_cpu_usage_seconds_total[1m])) / $host_cores",
+          "legendFormat": "host",
+          "refId": "B"
+        }
+      ],
+      "description": "Os núcleos da API e do host vêm das variáveis do dashboard: ajuste para o cpuset da rodada.",
+      "id": 28
+    },
+    {
+      "type": "timeseries",
+      "title": "Memória por serviço",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 78
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (compose_service) (container_memory_working_set_bytes)",
+          "legendFormat": "{{compose_service}}",
+          "refId": "A"
+        }
+      ],
+      "id": 29
+    },
+    {
+      "type": "row",
+      "title": "Logs",
+      "id": 30,
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 86
       }
     },
     {
       "type": "logs",
       "title": "Logs (Loki)",
-      "id": 20,
+      "id": 31,
       "datasource": {
         "type": "loki",
         "uid": "loki"
@@ -652,7 +1186,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 53
+        "y": 87
       },
       "options": {
         "showTime": true,
@@ -672,5 +1206,29 @@
       ]
     }
   ],
-  "editable": true
+  "editable": true,
+  "templating": {
+    "list": [
+      {
+        "type": "textbox",
+        "name": "app_cores",
+        "label": "Núcleos da API",
+        "query": "12",
+        "current": {
+          "text": "12",
+          "value": "12"
+        }
+      },
+      {
+        "type": "textbox",
+        "name": "host_cores",
+        "label": "Núcleos do host",
+        "query": "12",
+        "current": {
+          "text": "12",
+          "value": "12"
+        }
+      }
+    ]
+  }
 }

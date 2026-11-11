@@ -6,8 +6,10 @@ namespace Tests\Infrastructure\Shared\Console;
 
 use Illuminate\Console\Command;
 use Illuminate\Console\Signals;
+use Illuminate\Contracts\Config\Repository as Config;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Sleep;
+use Infrastructure\Shared\Health\MySqlReplicaStatus;
 use Infrastructure\Shared\Messaging\RabbitMqConnectionFactory;
 use Tests\Support\LaravelTestCase;
 use Tests\Support\Shared\Messaging\RabbitMqTestQueue;
@@ -77,6 +79,22 @@ final class RelayOutboxCommandTest extends LaravelTestCase
             ->run();
 
         self::assertSame(2, $this->capturedValue(metricName: 'outbox.pending'));
+        self::assertIsInt($this->capturedValue(metricName: 'mysql.replica.lag'));
+        self::assertSame(1, $this->capturedValue(metricName: 'mysql.replica.running'));
+    }
+
+    public function test_ReportsNoReplicaLagAndAStoppedReplicaWhileItIsUnreachable(): void
+    {
+        $this->app->make(Config::class)
+            ->set('database.connections.' . MySqlReplicaStatus::CONNECTION . '.host', 'no-such-replica.invalid');
+        $this->useBrokerOnPort(port: self::UNUSED_PORT);
+        $this->captureTelemetry();
+
+        $this->command(command: 'outbox:relay', parameters: ['--once' => true])
+            ->run();
+
+        self::assertNull($this->capturedValue(metricName: 'mysql.replica.lag'));
+        self::assertSame(0, $this->capturedValue(metricName: 'mysql.replica.running'));
     }
 
     public function test_KeepsPollingUntilAStopSignalAndFinishesTheBatchFirst(): void

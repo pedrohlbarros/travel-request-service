@@ -2,7 +2,7 @@ apiVersion: 1
 
 groups:
   - orgId: 1
-    name: notification
+    name: travel-request-service
     folder: Travel Request Service
     interval: 30s
     rules:
@@ -30,3 +30,51 @@ groups:
               conditions:
                 - evaluator: { type: gt, params: [0] }
               refId: above_zero
+      - uid: mysql-replica-lagging
+        title: Réplica MySQL atrasada
+        condition: above_five_seconds
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: A réplica de leitura está mais de 5 s atrás do primário (make db-replica-status).
+        data:
+          - refId: lag
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              expr: max(mysql_replica_lag_seconds) or vector(0)
+              instant: true
+              refId: lag
+          - refId: above_five_seconds
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: lag
+              conditions:
+                - evaluator: { type: gt, params: [5] }
+              refId: above_five_seconds
+      - uid: mysql-replica-stopped
+        title: Replicação MySQL parada
+        condition: stopped
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: A réplica de leitura não está replicando ou não responde (make db-replica-status; make db-replica-sync refaz a base).
+        data:
+          - refId: running
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              expr: min(mysql_replica_running) or vector(1)
+              instant: true
+              refId: running
+          - refId: stopped
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: running
+              conditions:
+                - evaluator: { type: lt, params: [1] }
+              refId: stopped

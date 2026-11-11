@@ -6,6 +6,8 @@ namespace Infrastructure\Notification\Messaging;
 
 use Application\Notification\Output\NotificationDelivery;
 use Application\Notification\UseCase\NotifyRequesterOfDecisionUseCase;
+use Application\Shared\Port\Clock;
+use DateTimeImmutable;
 use Domain\Notification\Exception\InvalidDecision;
 use Domain\Shared\Exception\InvalidIdentifier;
 use Illuminate\Log\Context\Repository as Context;
@@ -52,6 +54,10 @@ final readonly class DecisionMessageHandler
 
     private const array DURATION_BUCKETS_SECONDS = [0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0];
 
+    private const string EPOCH_SECONDS = 'U.u';
+
+    private const array END_TO_END_BUCKETS_SECONDS = [0.5, 1.0, 2.0, 3.0, 5.0, 10.0, 30.0, 60.0, 300.0, 900.0];
+
     public function __construct(
         private NotifyRequesterOfDecisionUseCase $notifyRequester,
         private DecisionMessageParser $parser,
@@ -59,6 +65,7 @@ final readonly class DecisionMessageHandler
         private LoggerInterface $logger,
         private Telemetry $telemetry,
         private Context $context,
+        private Clock $clock,
     ) {}
 
     /**
@@ -143,7 +150,33 @@ final readonly class DecisionMessageHandler
             return $this->retryOrDeadLetter(channel: $channel, message: $message, failure: $failure);
         }
 
-        return $delivery === NotificationDelivery::Delivered ? self::DELIVERED : self::DUPLICATE;
+        if ($delivery === NotificationDelivery::AlreadyDelivered) {
+            return self::DUPLICATE;
+        }
+
+        $this->recordEndToEnd(decidedAt: $input->decidedAt);
+
+        return self::DELIVERED;
+    }
+
+    /**
+     * From the decision to its delivery, through the outbox, the relay, the broker and any retry. The event
+     * time has one-second precision, so a delivery can read up to a second slower than it was.
+     */
+    private function recordEndToEnd(DateTimeImmutable $decidedAt): void
+    {
+        $deliveredAt = $this->clock->now();
+        $deliveredAtSeconds = (float) $deliveredAt->format(self::EPOCH_SECONDS);
+        $decidedAtSeconds = (float) $decidedAt->format(self::EPOCH_SECONDS);
+
+        $this->telemetry->meter()
+            ->createHistogram(
+                'notification.end_to_end.duration',
+                's',
+                'Time from a decision to the delivery of its notification.',
+                ['ExplicitBucketBoundaries' => self::END_TO_END_BUCKETS_SECONDS],
+            )
+            ->record($deliveredAtSeconds - $decidedAtSeconds);
     }
 
     private function record(string $outcome, float $durationSeconds): void
