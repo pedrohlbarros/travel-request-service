@@ -23,6 +23,22 @@ final class TravelPeriodTest extends TestCase
         self::assertSame('2026-12-05', $period->returnDate->format(self::CALENDAR_DATE));
     }
 
+    public function test_EqualsOnlyWhenBothDatesMatch(): void
+    {
+        $period = TravelRequestMother::period(departureDate: '2026-12-01', returnDate: '2026-12-05');
+        $copy = TravelRequestMother::period(departureDate: '2026-12-01', returnDate: '2026-12-05');
+        $withOtherDeparture = TravelRequestMother::period(departureDate: '2026-12-02', returnDate: '2026-12-05');
+        $withOtherReturn = TravelRequestMother::period(departureDate: '2026-12-01', returnDate: '2026-12-06');
+
+        $isSameAsItsCopy = $period->equals(other: $copy);
+        $isSameWithOtherDeparture = $period->equals(other: $withOtherDeparture);
+        $isSameWithOtherReturn = $period->equals(other: $withOtherReturn);
+
+        self::assertTrue($isSameAsItsCopy);
+        self::assertFalse($isSameWithOtherDeparture);
+        self::assertFalse($isSameWithOtherReturn);
+    }
+
     public function test_AllowsReturnOnDepartureDay(): void
     {
         $period = TravelRequestMother::period(departureDate: '2026-12-01', returnDate: '2026-12-01');

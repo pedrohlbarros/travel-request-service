@@ -34,4 +34,9 @@ final readonly class Destination
 
         return new self(name: $trimmedName);
     }
+
+    public function equals(self $other): bool
+    {
+        return $this->name === $other->name;
+    }
 }

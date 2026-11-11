@@ -103,27 +103,54 @@ final class TravelRequest
 
     /**
      * @throws TravelRequestNotOwned
+     */
+    public function assertOwnedBy(UserId $userId): void
+    {
+        if (! $this->requesterId->equals(other: $userId)) {
+            throw TravelRequestNotOwned::by(id: $this->id, userId: $userId);
+        }
+    }
+
+    /**
+     * Only the given details are changed; a missing date keeps its current value. Changing nothing for real
+     * leaves the version alone, and the departure is only checked against today when the dates change, so a
+     * trip that already started can still fix its destination.
+     *
+     * @throws TravelRequestNotOwned
      * @throws TravelRequestNotEditable
      * @throws InvalidTravelPeriod
      */
     public function changeDetails(
         UserId $editorId,
-        Destination $destination,
-        TravelPeriod $period,
+        ?Destination $destination,
+        ?DateTimeImmutable $departureDate,
+        ?DateTimeImmutable $returnDate,
         DateTimeImmutable $changedAt,
     ): void {
-        if (! $this->requesterId->equals(other: $editorId)) {
-            throw TravelRequestNotOwned::by(id: $this->id, userId: $editorId);
-        }
+        $this->assertOwnedBy(userId: $editorId);
 
         if ($this->status !== TravelRequestStatus::Requested) {
             throw TravelRequestNotEditable::inStatus(id: $this->id, status: $this->status);
         }
 
-        $period->assertDepartsOnOrAfterDayOf(moment: $changedAt);
+        $newDestination = $destination ?? $this->destination;
+        $newPeriod = TravelPeriod::between(
+            departureDate: $departureDate ?? $this->period->departureDate,
+            returnDate: $returnDate ?? $this->period->returnDate,
+        );
+        $isDestinationChanged = ! $newDestination->equals(other: $this->destination);
+        $isPeriodChanged = ! $newPeriod->equals(other: $this->period);
 
-        $this->destination = $destination;
-        $this->period = $period;
+        if (! $isDestinationChanged && ! $isPeriodChanged) {
+            return;
+        }
+
+        if ($isPeriodChanged) {
+            $newPeriod->assertDepartsOnOrAfterDayOf(moment: $changedAt);
+        }
+
+        $this->destination = $newDestination;
+        $this->period = $newPeriod;
         $this->advanceVersion(changedAt: $changedAt);
     }
 
