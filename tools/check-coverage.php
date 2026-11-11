@@ -6,7 +6,7 @@ $commandLine = is_array($_SERVER['argv'] ?? null) ? $_SERVER['argv'] : [];
 $stringArguments = array_filter($commandLine, 'is_string');
 $arguments = array_values($stringArguments);
 $cloverPath = $arguments[1] ?? 'build/coverage/clover.xml';
-$minimum = (float) ($arguments[2] ?? '85');
+$minimum = (float) ($arguments[2] ?? '100');
 
 if (!is_file($cloverPath)) {
     fwrite(STDERR, "Coverage report not found: {$cloverPath}\n");

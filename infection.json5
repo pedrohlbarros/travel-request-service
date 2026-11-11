@@ -10,8 +10,8 @@
     "mutators": {
         "@default": true
     },
-    "minMsi": 90,
-    "minCoveredMsi": 95,
+    "minMsi": 100,
+    "minCoveredMsi": 100,
     "threads": "max",
     "tmpDir": "storage/infection",
     "logs": {

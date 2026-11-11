@@ -146,11 +146,11 @@ test-tools: ## Tests of the in-repo tooling (custom PHPStan rules)
 test-e2e: ## End-to-end suite (against the running Octane server)
 	$(PHP) vendor/bin/phpunit --testsuite=e2e
 
-coverage: ## Every suite with line coverage; fails below 85%
+coverage: ## Every suite with line coverage; fails below 100%
 	$(PHP) vendor/bin/phpunit --coverage-clover=build/coverage/clover.xml --coverage-html=build/coverage/html --coverage-text --only-summary-for-coverage-text
-	$(PHP) tools/check-coverage.php build/coverage/clover.xml 85
+	$(PHP) tools/check-coverage.php build/coverage/clover.xml 100
 
-infection: ## Mutation testing on Domain + Application (MSI >= 90%, covered MSI >= 95%)
+infection: ## Mutation testing on Domain + Application (MSI and covered MSI at 100%)
 	$(EXEC) vendor/bin/infection --no-progress --show-mutations
 
 ##@ Not implemented yet
