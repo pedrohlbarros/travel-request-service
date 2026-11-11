@@ -6,6 +6,21 @@ x-healthcheck: &healthcheck
   retries: 30
   start_period: 10s
 
+x-otel-environment: &otel-environment
+  OTEL_PHP_AUTOLOAD_ENABLED: ${OTEL_PHP_AUTOLOAD_ENABLED:-true}
+  OTEL_SDK_DISABLED: ${OTEL_SDK_DISABLED:-true}
+  OTEL_RESOURCE_ATTRIBUTES: ${OTEL_RESOURCE_ATTRIBUTES:-deployment.environment.name=local}
+  OTEL_PHP_DETECTORS: ${OTEL_PHP_DETECTORS:-host,process,service_instance}
+  OTEL_TRACES_EXPORTER: ${OTEL_TRACES_EXPORTER:-otlp}
+  OTEL_METRICS_EXPORTER: ${OTEL_METRICS_EXPORTER:-otlp}
+  OTEL_LOGS_EXPORTER: ${OTEL_LOGS_EXPORTER:-otlp}
+  OTEL_EXPORTER_OTLP_PROTOCOL: ${OTEL_EXPORTER_OTLP_PROTOCOL:-http/protobuf}
+  OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}
+  OTEL_EXPORTER_OTLP_TIMEOUT: ${OTEL_EXPORTER_OTLP_TIMEOUT:-2000}
+  OTEL_PROPAGATORS: ${OTEL_PROPAGATORS:-tracecontext,baggage}
+  OTEL_TRACES_SAMPLER: ${OTEL_TRACES_SAMPLER:-parentbased_always_on}
+  OTEL_METRIC_EXPORT_INTERVAL: ${OTEL_METRIC_EXPORT_INTERVAL:-10000}
+
 services:
   app:
     build:
@@ -16,7 +31,9 @@ services:
         GID: ${GID:-1000}
     image: travel-request-service/app:dev
     environment:
+      <<: *otel-environment
       DB_TEST_DATABASE: ${DB_TEST_DATABASE:-travel_request_testing}
+      OTEL_SERVICE_NAME: travel-request-service
     ports:
       - "${FORWARD_APP_PORT:-8000}:8000"
     volumes:
@@ -34,6 +51,9 @@ services:
     image: travel-request-service/app:dev
     command: ["php", "artisan", "outbox:relay"]
     restart: unless-stopped
+    environment:
+      <<: *otel-environment
+      OTEL_SERVICE_NAME: travel-request-outbox-relay
     stop_signal: SIGTERM
     volumes:
       - .:/var/www/html
@@ -49,6 +69,9 @@ services:
     image: travel-request-service/app:dev
     command: ["php", "artisan", "notification:consume"]
     restart: unless-stopped
+    environment:
+      <<: *otel-environment
+      OTEL_SERVICE_NAME: travel-request-notification
     stop_signal: SIGTERM
     volumes:
       - .:/var/www/html
@@ -66,6 +89,8 @@ services:
     image: travel-request-service/app:dev
     command: ["php", "artisan", "reverb:start", "--debug"]
     restart: unless-stopped
+    environment:
+      OTEL_SDK_DISABLED: "true"
     ports:
       - "${FORWARD_REVERB_PORT:-8080}:8080"
     volumes:
@@ -128,6 +153,57 @@ services:
     healthcheck:
       <<: *healthcheck
       test: ["CMD", "/mailpit", "readyz"]
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.165.0
+    profiles: [obs]
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    volumes:
+      - ./docker/otel-collector/config.yaml:/etc/otelcol-contrib/config.yaml:ro
+    depends_on:
+      jaeger: { condition: service_started }
+      loki: { condition: service_started }
+
+  jaeger:
+    image: jaegertracing/jaeger:2.23.0
+    profiles: [obs]
+    ports:
+      - "${FORWARD_JAEGER_UI_PORT:-16686}:16686"
+
+  prometheus:
+    image: prom/prometheus:v3.16.0
+    profiles: [obs]
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=2d"]
+    ports:
+      - "${FORWARD_PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
+  loki:
+    image: grafana/loki:3.6.20
+    profiles: [obs]
+    command: ["-config.file=/etc/loki/local-config.yaml"]
+    ports:
+      - "${FORWARD_LOKI_PORT:-3100}:3100"
+
+  grafana:
+    image: grafana/grafana:13.2.6
+    profiles: [obs]
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/travel-request-service.json
+    ports:
+      - "${FORWARD_GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./docker/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      prometheus: { condition: service_started }
+      loki: { condition: service_started }
+      jaeger: { condition: service_started }
 
 volumes:
   mysql-data:
