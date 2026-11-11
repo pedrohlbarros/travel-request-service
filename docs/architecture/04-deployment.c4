@@ -1,0 +1,77 @@
+deployment {
+  environment local 'Docker Compose local' {
+    description 'Um host; cada porta publicada vem do .env (FORWARD_*_PORT)'
+
+    default = profile 'Perfil padrão (make up)' {
+      description 'Tudo o que a aplicação precisa para funcionar'
+
+      api = instanceOf trs.api {
+        title 'app'
+        description ':8000 · também serve /docs/notifications e /docs/api'
+      }
+      relay = instanceOf trs.relay {
+        title 'outbox-relay'
+      }
+      consumer = instanceOf trs.consumer {
+        title 'notification-consumer × 2'
+        description 'NOTIFICATION_CONSUMERS réplicas'
+      }
+      reverb = instanceOf trs.reverb {
+        title 'reverb'
+        description ':8080'
+      }
+      mysql = instanceOf trs.mysql {
+        title 'mysql'
+        description ':3306 · volume mysql-data'
+      }
+      replica = instanceOf trs.replica {
+        title 'mysql-replica'
+        description ':3307 · volume mysql-replica-data'
+      }
+      redis = instanceOf trs.redis {
+        title 'redis'
+        description ':6379 · volume redis-data'
+      }
+      rabbitmq = instanceOf trs.rabbitmq {
+        title 'rabbitmq'
+        description ':5672 e UI :15672 · volume rabbitmq-data'
+      }
+      mailpit = instanceOf email {
+        title 'mailpit'
+        description 'SMTP :1025 e UI :8025'
+      }
+    }
+
+    obs = profile 'Perfil obs (make obs)' {
+      description 'Telemetria; make obs liga o SDK na app, make obs-measure deixa desligado'
+
+      collector = instanceOf observability.collector
+      jaeger = instanceOf observability.jaeger {
+        description 'UI :16686'
+      }
+      prometheus = instanceOf observability.prometheus {
+        description ':9090 · remote write do k6'
+      }
+      loki = instanceOf observability.loki {
+        description ':3100'
+      }
+      grafana = instanceOf observability.grafana {
+        description ':3000 · leitura anônima'
+      }
+      cadvisor = instanceOf observability.cadvisor
+    }
+
+    load = profile 'Perfil load (make load-*)' {
+      k6 = instanceOf k6
+    }
+  }
+}
+
+views {
+  deployment view compose {
+    title '6. Deployment no Docker Compose'
+    description 'Containers por perfil. O perfil docs (diagramas) é só ferramenta de documentação'
+
+    include local.**
+  }
+}

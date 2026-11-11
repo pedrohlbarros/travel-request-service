@@ -1,0 +1,333 @@
+model {
+  requester = actor 'Solicitante' {
+    description 'Funcionário que pede viagens e acompanha as próprias solicitações'
+  }
+
+  admin = actor 'Administrador' {
+    description 'Aprova ou cancela pedidos de qualquer solicitante'
+  }
+
+  operator = actor 'Quem opera' {
+    description 'Acompanha métricas, traces, logs e filas'
+  }
+
+  email = external 'Servidor de e-mail' {
+    description 'Entrega o e-mail da decisão. No ambiente local é o Mailpit'
+    technology 'SMTP · Mailpit v1.33'
+    icon tech:maildeveloper
+  }
+
+  trs = system 'Travel Request Service' {
+    description 'Microsserviço de pedidos de viagem corporativa: API REST com JWT, decisões por admin e notificação do solicitante'
+
+    page = webapp 'Página de notificações' {
+      description 'HTML sem build servido pela API em /docs/notifications. Entra com uma conta de demo e mostra a decisão chegando ao vivo'
+      technology 'HTML, CSS, JS · Laravel Echo + Pusher JS'
+      icon tech:websocket
+    }
+
+    api = container 'API' {
+      description 'REST em /api/v1: autenticação, pedidos de viagem e notificações. 24 workers que guardam o app entre requests'
+      technology 'PHP 8.5 · Laravel 13 · Octane + Swoole'
+      icon tech:laravel
+
+      identity = context 'Identity' {
+        description 'Cadastro, login, tokens e papel do usuário'
+
+        authHttp = component 'Controllers e guard de autenticação' {
+          description 'Login, Refresh, Logout, Me, Register e o BearerTokenAuthenticator do guard'
+          technology 'Interfaces · FormRequest + Resource'
+        }
+        authUseCases = component 'Casos de uso de identidade' {
+          description 'LoginUseCase, RefreshAccessTokenUseCase, AuthenticateAccessTokenUseCase, LogoutUseCase'
+          technology 'Application'
+        }
+        user = component 'User e RefreshToken' {
+          description 'Entidades do domínio: papel, hash Argon2id, família de refresh tokens rotativos'
+          technology 'Domain'
+        }
+        jwt = component 'Emissor e verificador de JWT' {
+          description 'RS256 com kid e JWKS público; claims iss, aud, nbf, sem papel nem PII'
+          technology 'Infrastructure · lcobucci/jwt'
+          icon tech:jwt
+        }
+        revocation = component 'Lista de tokens revogados' {
+          description 'jti revogado no logout, com TTL até a expiração do access token'
+          technology 'Infrastructure · Redis'
+        }
+        roles = component 'Papel do usuário em cache' {
+          description 'CachedUserRoles sobre EloquentUserRoles: só a coluna role, 300 s no Redis'
+          technology 'Infrastructure · port UserRoles'
+        }
+        userRepo = component 'Repositórios de usuário e refresh token' {
+          description 'Eloquent, lendo do primário'
+          technology 'Infrastructure · Eloquent'
+        }
+      }
+
+      travelRequest = context 'TravelRequest' {
+        description 'Pedidos de viagem: criação, edição pelo dono, decisão pelo admin'
+
+        travelHttp = component 'Controllers, Policy, FormRequests e Resources' {
+          description 'Create, List, Show, ChangeDetails, Approve e Cancel; Policy por papel; ETag e If-Match'
+          technology 'Interfaces · Laravel HTTP'
+        }
+        travelUseCases = component 'Casos de uso de pedidos' {
+          description 'CreateTravelRequestUseCase, ApproveTravelRequestUseCase, CancelTravelRequestUseCase, ChangeTravelRequestDetailsUseCase, Get e List'
+          technology 'Application · CQRS leve'
+        }
+        travelAggregate = component 'TravelRequest' {
+          description 'Agregado com versão: requested → approved | cancelled; aprovado não cancela. Registra TravelRequestApproved e TravelRequestCancelled'
+          technology 'Domain'
+        }
+        travelRepo = component 'Repositório de pedidos' {
+          description 'Eloquent no primário, decorado com invalidação de cache após o commit e métricas de negócio'
+          technology 'Infrastructure · Eloquent'
+        }
+        travelQueries = component 'Consultas com cache' {
+          description 'Detalhe por id e listas por geração no Redis; o miss lê do primário; cursor keyset por id'
+          technology 'Infrastructure · Redis + MySQL'
+        }
+        outboxPublisher = component 'Publicador do outbox' {
+          description 'OutboxDomainEventPublisher grava o evento CloudEvents gordo na mesma transação da decisão'
+          technology 'Infrastructure · port DomainEventPublisher'
+        }
+      }
+
+      notificationHttp = context 'Notification (leitura)' {
+        description 'API das notificações do usuário e autorização do canal privado'
+
+        notificationControllers = component 'Controllers de notificações' {
+          description 'GET /notifications com cursor e filtro unread; POST /notifications/{id}/read idempotente'
+          technology 'Interfaces · Laravel HTTP'
+        }
+        channelAuth = component 'Autorização do canal users.{id}' {
+          description 'POST /broadcasting/auth com o JWT: cada usuário só escuta o próprio canal'
+          technology 'Interfaces · Laravel Broadcasting'
+        }
+      }
+
+      shared = context 'Shared' {
+        description 'Transversal: contexto da request, erros, saúde e telemetria'
+
+        middleware = component 'Middlewares' {
+          description 'AssignRequestContext (request_id), RecordRequestMetrics, RequireIfMatch (428)'
+          technology 'Interfaces'
+        }
+        problems = component 'Problem Details' {
+          description 'Erros em RFC 9457 com type documentado, request_id e trace_id'
+          technology 'Interfaces'
+        }
+        telemetry = component 'Telemetry' {
+          description 'Única porta para o OpenTelemetry: spans, métricas e export em lote'
+          technology 'Infrastructure · OTel SDK'
+          icon tech:opentelemetry-icon
+        }
+      }
+    }
+
+    relay = container 'Relay do outbox' {
+      description 'Lê o outbox em lotes de 100 com SKIP LOCKED e publica no RabbitMQ com publisher confirms. Polling de 200 ms a 2 s'
+      technology 'PHP 8.5 · artisan outbox:relay'
+      icon tech:php
+
+      relayLoop = component 'OutboxRelay' {
+        description 'Pega o lote pendente, publica e marca published_at; o que falha fica pendente'
+        technology 'Infrastructure'
+      }
+      rabbitPublisher = component 'RabbitMqOutboxPublisher' {
+        description 'Publica no exchange topic travel_request.events e espera o confirm'
+        technology 'Infrastructure · php-amqplib'
+      }
+      gauges = component 'Gauges de saúde' {
+        description 'outbox.pending, mysql.replica.lag e mysql.replica.running'
+        technology 'Infrastructure · OTel'
+      }
+    }
+
+    consumer = container 'Consumidor de decisões' {
+      description 'Entrega as notificações: inbox, banco e e-mail numa transação; broadcast depois do commit. Retry 10 s → 1 min → 5 min e DLQ'
+      technology 'PHP 8.5 · artisan notification:consume · 2 a 4 processos'
+      icon tech:php
+
+      handler = component 'DecisionMessageHandler' {
+        description 'Abre o span de consume, decide entre entregue, duplicado, retry ou DLQ e só então dá ack'
+        technology 'Infrastructure · php-amqplib'
+      }
+      parser = component 'DecisionMessageParser' {
+        description 'Valida o CloudEvent e monta o input do caso de uso'
+        technology 'Infrastructure'
+      }
+      notifyUseCase = component 'NotifyRequesterOfDecisionUseCase' {
+        description 'Inbox (processed_events) + notificação na mesma transação; duplicado não notifica de novo'
+        technology 'Application'
+      }
+      notifier = component 'LaravelDecisionNotifier' {
+        description 'Canais database (tabela própria em BINARY(16)) e mail, com textos pt-BR'
+        technology 'Infrastructure · Laravel Notifications'
+      }
+      broadcaster = component 'ReverbDecisionBroadcaster' {
+        description 'Evento travel_request.decided no canal privado users.{id}, best effort após o commit'
+        technology 'Infrastructure · Laravel Broadcasting'
+      }
+    }
+
+    reverb = container 'Reverb' {
+      description 'Servidor WebSocket com protocolo Pusher para os canais privados'
+      technology 'Laravel Reverb'
+      icon tech:websocket
+    }
+
+    mysql = database 'MySQL primário' {
+      description 'Pedidos, usuários, refresh tokens, outbox, inbox e notificações. Commit durável, GTID'
+      technology 'MySQL 8.4'
+      icon tech:mysql
+    }
+
+    replica = database 'MySQL réplica' {
+      description 'Réplica de leitura assíncrona por GTID, sem binlog próprio'
+      technology 'MySQL 8.4 · super_read_only'
+      icon tech:mysql
+    }
+
+    redis = database 'Redis' {
+      description 'Cache de pedidos e do papel, tokens revogados e rate limit do login'
+      technology 'Redis 8'
+      icon tech:redis
+    }
+
+    rabbitmq = broker 'RabbitMQ' {
+      description 'Exchange topic travel_request.events; filas quorum notification.travel_request, de retry e DLQ'
+      technology 'RabbitMQ 4.3 · AMQP 0-9-1'
+      icon tech:rabbitmq
+    }
+  }
+
+  observability = system 'Observabilidade (perfil obs)' {
+    description 'Traces, métricas e logs pelo OpenTelemetry'
+
+    collector = tool 'OpenTelemetry Collector' {
+      description 'Porta única de entrada OTLP; raspa o RabbitMQ e o cAdvisor'
+      technology 'otelcol-contrib 0.165'
+      icon tech:opentelemetry-icon
+    }
+    jaeger = tool 'Jaeger' {
+      description 'Traces ponta a ponta: HTTP → outbox → publish → consume'
+      technology 'Jaeger 2.23'
+      icon tech:jaeger
+    }
+    prometheus = tool 'Prometheus' {
+      description 'Métricas da app, do RabbitMQ, dos containers e do k6'
+      technology 'Prometheus 3.16'
+      icon tech:prometheus
+    }
+    loki = tool 'Loki' {
+      description 'Logs JSON com trace_id'
+      technology 'Loki 3.6'
+    }
+    grafana = tool 'Grafana' {
+      description 'Dashboards do serviço e do k6, alertas de DLQ e da réplica'
+      technology 'Grafana 13.2'
+      icon tech:grafana
+    }
+    cadvisor = tool 'cAdvisor' {
+      description 'CPU e memória por container'
+      technology 'cAdvisor 0.60'
+    }
+  }
+
+  k6 = tool 'k6 (perfil load)' {
+    description 'Smoke, load, capacity, stress e concorrência'
+    technology 'k6 2.2'
+  }
+
+  // Context
+  requester -> trs.page 'acompanha as notificações'
+  requester -> trs.api 'pede e consulta viagens' 'HTTPS · JSON · JWT'
+  admin -> trs.api 'aprova ou cancela pedidos' 'HTTPS · If-Match'
+  operator -> observability.grafana 'acompanha o serviço'
+  trs.consumer -> email 'envia o e-mail da decisão' 'SMTP'
+  email -> requester 'entrega o e-mail'
+
+  // Containers
+  trs.page -> trs.api 'login e notificações' 'fetch · JSON'
+  trs.page -> trs.reverb 'escuta users.{id}' 'WebSocket' {
+    style {
+      line dashed
+    }
+  }
+  trs.api -> trs.mysql 'escreve e lê o lado de comando' 'PDO'
+  trs.api -> trs.replica 'lê notificações' 'PDO · read/write sticky'
+  trs.api -> trs.redis 'cache, papel e tokens revogados' 'phpredis'
+  trs.relay -> trs.mysql 'lê o outbox' 'SELECT … FOR UPDATE SKIP LOCKED'
+  trs.relay -> trs.rabbitmq 'publica o CloudEvent' 'AMQP · confirms'
+  trs.rabbitmq -[async]-> trs.consumer 'entrega a decisão' 'AMQP · prefetch 10'
+  trs.consumer -> trs.mysql 'inbox e notificação' 'PDO · transação'
+  trs.consumer -> trs.reverb 'transmite a notificação' 'HTTP · Pusher API'
+  trs.reverb -[async]-> trs.page 'evento travel_request.decided' 'WebSocket'
+  trs.mysql -> trs.replica 'replica' 'GTID assíncrono'
+
+  // Observability
+  trs.api -[telemetry]-> observability.collector 'traces, métricas e logs' 'OTLP http/protobuf'
+  trs.relay -[telemetry]-> observability.collector 'spans de publish e gauges' 'OTLP'
+  trs.consumer -[telemetry]-> observability.collector 'spans de consume e métricas' 'OTLP'
+  observability.collector -[telemetry]-> trs.rabbitmq 'raspa as filas' 'Prometheus'
+  observability.collector -[telemetry]-> observability.cadvisor 'raspa os containers'
+  observability.collector -[telemetry]-> observability.jaeger 'traces' 'OTLP gRPC'
+  observability.prometheus -[telemetry]-> observability.collector 'raspa as métricas' ':8889'
+  observability.collector -[telemetry]-> observability.loki 'logs' 'OTLP'
+  observability.grafana -> observability.prometheus 'consulta'
+  observability.grafana -> observability.jaeger 'consulta'
+  observability.grafana -> observability.loki 'consulta'
+  k6 -> trs.api 'gera carga' 'HTTP'
+  k6 -[telemetry]-> observability.prometheus 'métricas da carga' 'remote write'
+
+  // Identity components
+  trs.api.shared.middleware -> trs.api.identity.authHttp 'autentica pelo guard'
+  trs.api.identity.authHttp -> trs.api.identity.authUseCases 'chama'
+  trs.api.identity.authUseCases -> trs.api.identity.user 'usa'
+  trs.api.identity.authUseCases -> trs.api.identity.jwt 'emite e verifica' 'port AccessTokenIssuer/Verifier'
+  trs.api.identity.authUseCases -> trs.api.identity.revocation 'consulta e revoga' 'port AccessTokenRevocationList'
+  trs.api.identity.authUseCases -> trs.api.identity.roles 'lê o papel' 'port UserRoles'
+  trs.api.identity.authUseCases -> trs.api.identity.userRepo 'lê e grava' 'ports de repositório'
+  trs.api.identity.revocation -> trs.redis 'EXISTS / SET jti'
+  trs.api.identity.roles -> trs.redis 'GET / SETEX role'
+  trs.api.identity.roles -> trs.mysql 'SELECT role no miss'
+  trs.api.identity.userRepo -> trs.mysql 'users, refresh_tokens'
+
+  // TravelRequest components
+  trs.api.shared.middleware -> trs.api.travelRequest.travelHttp 'If-Match, request_id, métricas'
+  trs.api.travelRequest.travelHttp -> trs.api.travelRequest.travelUseCases 'chama com Input DTO'
+  trs.api.travelRequest.travelUseCases -> trs.api.travelRequest.travelAggregate 'cria, edita e decide'
+  trs.api.travelRequest.travelUseCases -> trs.api.travelRequest.travelRepo 'get / add / update' 'port TravelRequestRepository'
+  trs.api.travelRequest.travelUseCases -> trs.api.travelRequest.travelQueries 'detalhe e listas' 'port TravelRequestQueries'
+  trs.api.travelRequest.travelUseCases -> trs.api.travelRequest.outboxPublisher 'publica eventos do agregado' 'port DomainEventPublisher'
+  trs.api.travelRequest.travelRepo -> trs.mysql 'UPDATE … WHERE version = ?'
+  trs.api.travelRequest.travelRepo -> trs.redis 'invalida após o commit'
+  trs.api.travelRequest.travelQueries -> trs.redis 'GET / SETEX'
+  trs.api.travelRequest.travelQueries -> trs.mysql 'SELECT no miss'
+  trs.api.travelRequest.outboxPublisher -> trs.mysql 'INSERT outbox_messages'
+  trs.api.travelRequest.travelHttp -> trs.api.shared.problems 'erros de domínio viram 404/409/412'
+
+  // Notification HTTP components
+  trs.api.notificationHttp.notificationControllers -> trs.replica 'SELECT notifications'
+  trs.api.notificationHttp.notificationControllers -> trs.mysql 'UPDATE read_at'
+  trs.page -> trs.api.notificationHttp.channelAuth 'autoriza o canal'
+  trs.page -> trs.api.notificationHttp.notificationControllers 'lista e marca como lida'
+
+  // Relay and consumer components
+  trs.relay.relayLoop -> trs.mysql 'lote pendente'
+  trs.relay.relayLoop -> trs.relay.rabbitPublisher 'publica cada mensagem'
+  trs.relay.rabbitPublisher -> trs.rabbitmq 'basic_publish + confirm'
+  trs.relay.gauges -> trs.replica 'SHOW REPLICA STATUS'
+  trs.rabbitmq -[async]-> trs.consumer.handler 'basic_consume'
+  trs.consumer.handler -> trs.consumer.parser 'valida o CloudEvent'
+  trs.consumer.handler -> trs.consumer.notifyUseCase 'executa'
+  trs.consumer.handler -> trs.rabbitmq 'ack, retry ou DLQ'
+  trs.consumer.notifyUseCase -> trs.consumer.notifier 'entrega' 'port DecisionNotifier'
+  trs.consumer.notifyUseCase -> trs.consumer.broadcaster 'transmite após o commit' 'port DecisionBroadcaster'
+  trs.consumer.notifyUseCase -> trs.mysql 'INSERT processed_events'
+  trs.consumer.notifier -> trs.mysql 'INSERT notifications'
+  trs.consumer.notifier -> email 'e-mail Markdown'
+  trs.consumer.broadcaster -> trs.reverb 'travel_request.decided'
+}

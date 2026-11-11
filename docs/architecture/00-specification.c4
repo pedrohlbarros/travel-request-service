@@ -1,0 +1,91 @@
+specification {
+  element actor {
+    notation 'Pessoa'
+    style {
+      shape person
+      color green
+    }
+  }
+  element system {
+    notation 'Sistema'
+    style {
+      color primary
+    }
+  }
+  element external {
+    notation 'Sistema externo'
+    style {
+      color muted
+    }
+  }
+  element container {
+    notation 'Container'
+    style {
+      color sky
+    }
+  }
+  element database {
+    notation 'Banco de dados'
+    style {
+      shape storage
+      color indigo
+    }
+  }
+  element broker {
+    notation 'Broker de mensagens'
+    style {
+      shape queue
+      color amber
+    }
+  }
+  element webapp {
+    notation 'Página no navegador'
+    style {
+      shape browser
+      color sky
+    }
+  }
+  element tool {
+    notation 'Ferramenta de apoio'
+    style {
+      color slate
+    }
+  }
+  element context {
+    notation 'Bounded context'
+    style {
+      color secondary
+      opacity 15%
+      border dashed
+    }
+  }
+  element component {
+    notation 'Componente'
+    style {
+      color blue
+    }
+  }
+
+  relationship async {
+    notation 'Assíncrono (mensageria, WebSocket)'
+    line dashed
+    color amber
+  }
+  relationship telemetry {
+    notation 'Telemetria'
+    line dotted
+    color gray
+  }
+
+
+  deploymentNode environment {
+    notation 'Ambiente'
+  }
+  deploymentNode profile {
+    notation 'Perfil do Docker Compose'
+    style {
+      color gray
+      border dashed
+    }
+  }
+}

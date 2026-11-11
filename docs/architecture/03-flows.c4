@@ -1,0 +1,361 @@
+views {
+  dynamic view loginFlow {
+    title '5.1 Login, refresh e uma request autenticada'
+    description 'Access token RS256 de 15 min sem papel nem PII; refresh opaco rotativo de 7 dias, guardado só como hash'
+
+    requester -> trs.api 'POST /api/v1/auth/login' {
+      notes '''
+**Request**
+```http
+POST /api/v1/auth/login
+Content-Type: application/json
+
+{"email":"luffy@example.com","password":"password123"}
+```
+Rate limit de 5 tentativas por minuto (Redis). Senha conferida com Argon2id.
+'''
+    }
+    trs.api -> trs.mysql 'busca o usuário pelo e-mail e grava o refresh token' {
+      notes '''
+```sql
+SELECT * FROM users WHERE email = ? LIMIT 1;
+INSERT INTO refresh_tokens (id, user_id, family_id, token_hash, expires_at, ...)
+```
+O banco guarda só o hash SHA-256 do refresh token, com a família para detectar reuso.
+'''
+    }
+    trs.api -> requester '200 com o par de tokens' {
+      notes '''
+```json
+{
+  "access_token": "eyJ0eXAiOiJKV1QiLCJhbGci…",
+  "token_type": "Bearer",
+  "expires_in": 900,
+  "refresh_token": "TqlTFbM5biW6mIBfWbwD…",
+  "refresh_expires_in": 604800
+}
+```
+Claims do access token:
+```json
+{"iss":"http://localhost:8000","aud":"travel-request-service",
+ "sub":"01a1c363-…5869","jti":"01a1cbc5-…6d84",
+ "iat":1794420054,"nbf":1794420054,"exp":1794420954}
+```
+Header: `{"alg":"RS256","kid":"QjMkCHhr…"}`, chave pública em `/.well-known/jwks.json`.
+'''
+    }
+    requester -> trs.api 'GET /api/v1/travel-requests com Bearer' {
+      notes '''
+Cada request autenticada passa pelo guard: verifica assinatura, `iss`, `aud`, `nbf` e `exp`.
+'''
+    }
+    trs.api -> trs.redis 'jti revogado? papel do usuário?' {
+      notes '''
+```text
+EXISTS identity:revoked-access-token:01a1cbc5-…6d84   → 0
+GET    identity:user-role:01a1c363-…5869              → "user"
+```
+O papel vem do usuário guardado (cache de 300 s), nunca do token.
+'''
+    }
+    trs.api -> requester '200 com os pedidos do próprio usuário'
+    requester -> trs.api 'POST /api/v1/auth/refresh' {
+      notes '''
+```json
+{"refresh_token":"TqlTFbM5biW6mIBfWbwD…"}
+```
+'''
+    }
+    trs.api -> trs.mysql 'revoga o refresh usado e grava o novo da mesma família' {
+      notes '''
+Rotação: cada refresh vale uma vez. Reusar um refresh já trocado revoga a família inteira.
+'''
+    }
+    trs.api -> requester '200 com um par novo'
+  }
+
+  dynamic view createFlow {
+    title '5.2 Criar e consultar um pedido'
+    description 'O solicitante vem do token; a resposta traz ETag para o controle de concorrência'
+
+    requester -> trs.api 'POST /api/v1/travel-requests' {
+      notes '''
+```http
+POST /api/v1/travel-requests
+Authorization: Bearer eyJ0eXAi…
+
+{"destination":"Wano","departure_date":"2026-12-10","return_date":"2026-12-15"}
+```
+FormRequest valida destino de 2 a 120 caracteres, ida a partir de hoje e volta no mesmo dia ou depois da ida. Erros saem como `/problems/validation-failed`.
+'''
+    }
+    trs.api -> trs.mysql 'INSERT travel_requests (versão 1)' {
+      notes '''
+O id é UUIDv7 gerado no domínio e gravado em `BINARY(16)`. `requester_id` é FK para `users`.
+'''
+    }
+    trs.api -> trs.redis 'invalida as listas do dono e do admin' {
+      notes '''
+Depois do commit:
+```text
+INCRBY travel_requests:generation:owner:01a1c363-…5869 1
+INCRBY travel_requests:generation:admin 1
+```
+'''
+    }
+    trs.api -> requester '201 Created, ETag "1"' {
+      notes '''
+```http
+HTTP/1.1 201 Created
+ETag: "1"
+Location: /api/v1/travel-requests/01a1cbc5-…3a21
+```
+```json
+{"data":{"id":"01a1cbc5-…3a21",
+  "requester":{"id":"01a1c363-…5869","name":"Monkey D. Luffy"},
+  "destination":"Wano","departure_date":"2026-12-10","return_date":"2026-12-15",
+  "status":"requested","version":1,"decided_by":null,
+  "created_at":"2026-11-11T18:00:56+00:00","updated_at":"2026-11-11T18:00:56+00:00"}}
+```
+'''
+    }
+    requester -> trs.api 'GET /api/v1/travel-requests?status=approved&destination=Wano' {
+      notes '''
+Filtros: `status`, `destination`, `created_from`/`created_to`, `travel_from`/`travel_to`, `per_page` e `cursor`. O usuário comum vê só os próprios pedidos; o admin vê todos.
+'''
+    }
+    trs.api -> trs.redis 'lista em cache por geração' {
+      notes '''
+Hit: nenhuma query. Miss: um SELECT no primário com paginação keyset por `id`, e o resultado volta para o cache por 30 s.
+'''
+    }
+    trs.api -> requester '200 com data, meta e links do cursor'
+  }
+
+  dynamic view decisionFlow {
+    title '5.3 Aprovação → outbox → RabbitMQ → notificação'
+    description 'O fluxo central: a decisão e o evento são gravados juntos; o relay publica; o consumidor entrega banco, e-mail e WebSocket'
+
+    admin -> trs.api 'POST /travel-requests/{id}/approve com If-Match: "1"' {
+      notes '''
+```http
+POST /api/v1/travel-requests/01a1cbc5-…3a21/approve
+Authorization: Bearer eyJ0eXAi… (admin)
+If-Match: "1"
+```
+Respostas possíveis: 403 (não é admin, antes de qualquer leitura), 428 (sem If-Match), 404, 412 (versão diferente) e 409 (regra de estado).
+'''
+    }
+    trs.api -> trs.mysql 'uma transação: decisão + evento no outbox' {
+      notes '''
+```sql
+SELECT * FROM travel_requests WHERE id = ?;
+UPDATE travel_requests SET status = "approved", version = 2, decided_by = ?
+  WHERE id = ? AND version = 1;
+SELECT id, name, email FROM users WHERE id = ?;   -- evento gordo
+INSERT INTO outbox_messages (id, exchange, routing_key, payload, headers, occurred_at, published_at)
+COMMIT;
+```
+Linha do outbox:
+```text
+exchange    travel_request.events
+routing_key travel_request.approved.v1
+headers     {"x-request-id": "01a1cbc5-…5fc7"}   (+ traceparent com o tracing ligado)
+occurred_at 2026-11-11 18:00:57   published_at NULL
+```
+'''
+    }
+    trs.api -> trs.redis 'invalida o detalhe e as listas, depois do commit'
+    trs.api -> admin '200, ETag "2", status approved' {
+      notes '''
+```json
+{"data":{"id":"01a1cbc5-…3a21","status":"approved","version":2,
+  "decided_by":{"id":"01a1c363-…ab81","name":"Admin"},
+  "updated_at":"2026-11-11T18:00:57+00:00"}}
+```
+Repetir com `If-Match: "1"` agora dá **412** `/problems/version-mismatch`; cancelar com `If-Match: "2"` dá **409** `/problems/invalid-status-transition`.
+'''
+    }
+    trs.relay -> trs.mysql 'pega o lote pendente' {
+      notes '''
+```sql
+SELECT * FROM outbox_messages WHERE published_at IS NULL
+  ORDER BY id LIMIT 100 FOR UPDATE SKIP LOCKED;
+```
+Polling adaptativo de 200 ms a 2 s. Vários relays não pegam a mesma linha.
+'''
+    }
+    trs.relay -> trs.rabbitmq 'publica o CloudEvent e espera o confirm' {
+      notes '''
+```json
+{
+  "specversion": "1.0",
+  "id": "01a1cbc5-…e7d8",
+  "source": "/travel-request-service",
+  "type": "travel_request.approved.v1",
+  "subject": "01a1cbc5-…3a21",
+  "time": "2026-11-11T18:00:57+00:00",
+  "datacontenttype": "application/json",
+  "data": {
+    "travel_request_id": "01a1cbc5-…3a21",
+    "requester": {
+      "id": "01a1c363-…5869",
+      "name": "Monkey D. Luffy",
+      "email": "luffy@example.com"
+    },
+    "destination": "Wano",
+    "departure_date": "2026-12-10",
+    "return_date": "2026-12-15",
+    "status": "approved",
+    "version": 2,
+    "approved_by": "01a1c363-…ab81"
+  }
+}
+```
+Propriedades: `message_id` = id do evento, `content_type: application/cloudevents+json`, `delivery_mode: 2` (persistente).
+'''
+    }
+    trs.relay -> trs.mysql 'marca published_at' {
+      notes '''
+`published_at 2026-11-11 18:00:58` — um segundo depois da decisão. Se o broker não confirmar, a linha fica pendente e volta no próximo lote.
+'''
+    }
+    trs.rabbitmq -> trs.consumer 'entrega pela fila quorum notification.travel_request' {
+      notes '''
+Binding `travel_request.#`, prefetch 10. O consumidor continua o trace a partir do `traceparent` da mensagem.
+'''
+    }
+    trs.consumer -> trs.mysql 'inbox + notificação na mesma transação' {
+      notes '''
+```text
+processed_events  consumer=notification.travel_request  event_id=01a1cbc5-…e7d8
+notifications     id=01a1cbc5-…e7d8  type=travel_request.approved
+                  message="Seu pedido de viagem para Wano, de 10/12/2026 a 15/12/2026, foi aprovado."
+                  data={"travel_request_id":"01a1cbc5-…3a21","destination":"Wano",
+                        "departure_date":"2026-12-10","return_date":"2026-12-15",
+                        "status":"approved","decided_by":"01a1c363-…ab81"}
+```
+Se o `event_id` já está no inbox, é duplicado: nada é entregue de novo.
+'''
+    }
+    trs.consumer -> email 'e-mail da decisão, dentro da transação' {
+      notes '''
+```text
+De:      Travel Request Service <no-reply@travel-request.local>
+Para:    Monkey D. Luffy <luffy@example.com>
+Assunto: Seu pedido de viagem para Wano foi aprovado
+
+Olá, Monkey D. Luffy!
+Seu pedido de viagem para Wano, de 10/12/2026 a 15/12/2026, foi aprovado.
+Equipe de Viagens
+```
+Se o SMTP falhar, a transação desfaz o inbox e a mensagem vai para o retry.
+'''
+    }
+    trs.consumer -> trs.reverb 'transmite depois do commit' {
+      notes '''
+Canal privado `private-users.01a1c363-…5869`, evento `travel_request.decided`:
+```json
+{"id":"01a1cbc5-…e7d8","type":"travel_request.approved",
+ "message":"Seu pedido de viagem para Wano, de 10/12/2026 a 15/12/2026, foi aprovado.",
+ "data":{"travel_request_id":"01a1cbc5-…3a21","destination":"Wano","status":"approved", ...},
+ "created_at":"2026-11-11T18:00:58+00:00"}
+```
+Best effort: se o Reverb cair, a notificação continua no banco.
+'''
+    }
+    trs.reverb -> trs.page 'evento no WebSocket' {
+      notes '''
+A página destaca a notificação nova, mostra um aviso e atualiza o contador de não lidas. O id é o mesmo da linha em `notifications`, então "marcar como lida" funciona na hora.
+'''
+    }
+    trs.consumer -> trs.rabbitmq 'ack' {
+      notes '''
+O ack só sai depois que a mensagem foi resolvida: entregue, duplicada, mandada para retry ou para a DLQ.
+'''
+    }
+    trs.page -> trs.api 'POST /notifications/{id}/read' {
+      notes '''
+Idempotente: marcar de novo devolve 200 sem mudar o `read_at`.
+'''
+    }
+  }
+
+  dynamic view retryFlow {
+    title '5.4 Falha na entrega: retry e DLQ'
+    description 'Retry com espera de 10 s, 1 min e 5 min em filas com TTL; depois, a dead letter queue com o motivo'
+
+    trs.rabbitmq -> trs.consumer 'entrega a decisão'
+    trs.consumer -> email 'SMTP falha' {
+      notes '''
+Qualquer exceção na entrega desfaz a transação: nem inbox nem notificação ficam gravados.
+'''
+    }
+    trs.consumer -> trs.rabbitmq 'republica na fila de espera e dá ack' {
+      notes '''
+```text
+fila     notification.travel_request.retry.10s   (x-message-ttl 10000)
+headers  x-retry-count: 1
+         x-last-error: <mensagem da exceção>
+```
+Ao vencer o TTL, a fila de espera devolve a mensagem para a fila principal (dead-letter exchange).
+'''
+    }
+    trs.rabbitmq -> trs.consumer 'nova tentativa depois de 10 s, 1 min e 5 min' {
+      notes '''
+Uma tentativa que dá certo entrega normalmente; o inbox garante que nada é entregue duas vezes.
+'''
+    }
+    trs.consumer -> trs.rabbitmq 'esgotou: vai para notification.travel_request.dlq' {
+      notes '''
+```text
+headers  x-death-reason: retries_exhausted   (ou unreadable, se o evento é inválido)
+         x-last-error: …
+```
+O alerta "Decisões na dead letter queue" dispara no Grafana. `make dlq` lista o motivo e `make dlq-replay` devolve as mensagens à fila principal.
+'''
+    }
+    operator -> observability.grafana 'vê o alerta da DLQ'
+  }
+
+  dynamic view traceFlow {
+    title '5.5 Um trace ponta a ponta'
+    description 'Da request na API à entrega: o traceparent atravessa outbox, RabbitMQ e consumidor; tudo chega ao Collector'
+
+    admin -> trs.api 'POST …/approve' {
+      notes '''
+Span raiz `POST /api/v1/travel-requests/{travelRequestId}/approve`, com os spans `sql SELECT`, `sql UPDATE` e `sql INSERT` dentro.
+'''
+    }
+    trs.api -> trs.mysql 'grava o traceparent da request no outbox' {
+      notes '''
+```json
+{"x-request-id":"01a1cbc5-…5fc7","traceparent":"00-4bf92f35…4736-00f067aa0ba902b7-01"}
+```
+'''
+    }
+    trs.relay -> trs.rabbitmq 'span publish, filho do span HTTP' {
+      notes '''
+Span `publish travel_request.events` (PRODUCER). O relay injeta o próprio contexto nos headers da mensagem.
+'''
+    }
+    trs.rabbitmq -> trs.consumer 'span process, filho do publish' {
+      notes '''
+Span `process notification.travel_request` (CONSUMER), com `notification.deliver` (banco + e-mail) e `notification.broadcast` dentro. O `x-request-id` vai para o contexto dos logs.
+'''
+    }
+    trs.api -> observability.collector 'spans e métricas em lote (5 s)' {
+      notes '''
+Export OTLP http/protobuf com a extensão protobuf: custo de 3,4% de vazão com 100% de amostragem.
+'''
+    }
+    trs.consumer -> observability.collector 'spans de consume e notification.end_to_end.duration' {
+      notes '''
+`notification.end_to_end.duration` mede da decisão à entrega: no máximo 1 a 2 s na carga de projeto (100 req/s).
+'''
+    }
+    observability.collector -> observability.jaeger 'um trace com HTTP → publish → consume'
+    observability.prometheus -> observability.collector 'raspa as métricas'
+    operator -> observability.grafana 'abre o trace a partir do painel de latência'
+  }
+}
