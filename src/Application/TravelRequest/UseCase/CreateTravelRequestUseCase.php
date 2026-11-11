@@ -8,6 +8,7 @@ use Application\Shared\Port\Clock;
 use Application\Shared\Port\IdentifierGenerator;
 use Application\TravelRequest\Input\CreateTravelRequestInput;
 use Application\TravelRequest\Output\TravelRequestOutput;
+use Application\TravelRequest\Port\TravelRequestQueries;
 use Domain\Shared\Exception\InvalidIdentifier;
 use Domain\TravelRequest\Entity\TravelRequest;
 use Domain\TravelRequest\Exception\InvalidDestination;
@@ -22,11 +23,14 @@ final readonly class CreateTravelRequestUseCase
 {
     public function __construct(
         private TravelRequestRepository $travelRequests,
+        private TravelRequestQueries $queries,
         private IdentifierGenerator $identifiers,
         private Clock $clock,
     ) {}
 
     /**
+     * Writes answer with the request read back, so they carry the user names like any read.
+     *
      * @throws InvalidIdentifier
      * @throws InvalidDestination
      * @throws InvalidTravelPeriod
@@ -44,6 +48,6 @@ final readonly class CreateTravelRequestUseCase
 
         $this->travelRequests->add(travelRequest: $travelRequest);
 
-        return TravelRequestOutput::fromEntity(travelRequest: $travelRequest);
+        return $this->queries->get(id: $travelRequest->id);
     }
 }

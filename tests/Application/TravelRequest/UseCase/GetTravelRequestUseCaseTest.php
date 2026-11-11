@@ -11,6 +11,7 @@ use Domain\TravelRequest\Enum\TravelRequestStatus;
 use Domain\TravelRequest\Exception\TravelRequestNotFound;
 use PHPUnit\Framework\TestCase;
 use Tests\Support\TravelRequest\Fixture\TravelRequestMother as Mother;
+use Tests\Support\TravelRequest\Port\InMemoryTravelRequestQueries;
 use Tests\Support\TravelRequest\Repository\InMemoryTravelRequestRepository;
 
 final class GetTravelRequestUseCaseTest extends TestCase
@@ -26,7 +27,8 @@ final class GetTravelRequestUseCaseTest extends TestCase
     protected function setUp(): void
     {
         $this->travelRequests = new InMemoryTravelRequestRepository();
-        $this->useCase = new GetTravelRequestUseCase(travelRequests: $this->travelRequests);
+        $queries = new InMemoryTravelRequestQueries(travelRequests: $this->travelRequests);
+        $this->useCase = new GetTravelRequestUseCase(queries: $queries);
     }
 
     public function test_RequesterSeesOwnTravelRequest(): void
@@ -40,7 +42,7 @@ final class GetTravelRequestUseCaseTest extends TestCase
         ));
 
         self::assertSame(Mother::TRAVEL_REQUEST_ID, $found->id);
-        self::assertSame(Mother::REQUESTER_ID, $found->requesterId);
+        self::assertEquals(Mother::userReference(id: Mother::REQUESTER_ID), $found->requester);
         self::assertSame(Mother::DESTINATION, $found->destination);
         self::assertEquals(Mother::moment(moment: Mother::DEPARTURE_DATE), $found->departureDate);
         self::assertEquals(Mother::moment(moment: Mother::RETURN_DATE), $found->returnDate);
@@ -62,7 +64,7 @@ final class GetTravelRequestUseCaseTest extends TestCase
         ));
 
         self::assertSame(TravelRequestStatus::Approved, $found->status);
-        self::assertSame(Mother::ADMIN_ID, $found->decidedBy);
+        self::assertEquals(Mother::userReference(id: Mother::ADMIN_ID), $found->decidedBy);
         self::assertEquals(Mother::moment(moment: Mother::LATER), $found->updatedAt);
     }
 

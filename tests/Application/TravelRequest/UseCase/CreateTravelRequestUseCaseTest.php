@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Application\TravelRequest\UseCase;
 
 use Application\TravelRequest\Input\CreateTravelRequestInput;
-use Application\TravelRequest\Output\TravelRequestOutput;
 use Application\TravelRequest\UseCase\CreateTravelRequestUseCase;
 use Domain\Shared\Exception\InvalidIdentifier;
 use Domain\TravelRequest\Entity\TravelRequest;
@@ -17,6 +16,7 @@ use PHPUnit\Framework\TestCase;
 use Tests\Support\Shared\Port\FrozenClock;
 use Tests\Support\Shared\Port\SequentialIdentifierGenerator;
 use Tests\Support\TravelRequest\Fixture\TravelRequestMother as Mother;
+use Tests\Support\TravelRequest\Port\InMemoryTravelRequestQueries;
 use Tests\Support\TravelRequest\Repository\InMemoryTravelRequestRepository;
 
 final class CreateTravelRequestUseCaseTest extends TestCase
@@ -31,6 +31,7 @@ final class CreateTravelRequestUseCaseTest extends TestCase
         $this->travelRequests = new InMemoryTravelRequestRepository();
         $this->useCase = new CreateTravelRequestUseCase(
             travelRequests: $this->travelRequests,
+            queries: new InMemoryTravelRequestQueries(travelRequests: $this->travelRequests),
             identifiers: new SequentialIdentifierGenerator(),
             clock: $clock,
         );
@@ -49,7 +50,7 @@ final class CreateTravelRequestUseCaseTest extends TestCase
 
         $stored = $this->travelRequests->get(id: TravelRequestId::fromString(id: $created->id));
 
-        self::assertEquals(TravelRequestOutput::fromEntity(travelRequest: $stored), $created);
+        self::assertEquals(Mother::output(travelRequest: $stored), $created);
         self::assertSame(SequentialIdentifierGenerator::nth(sequence: 1), $created->id);
         self::assertSame(Mother::REQUESTER_ID, $stored->requesterId->toString());
         self::assertSame(Mother::DESTINATION, $stored->destination->name);

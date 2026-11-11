@@ -6,16 +6,15 @@ namespace Application\TravelRequest\UseCase;
 
 use Application\TravelRequest\Input\GetTravelRequestInput;
 use Application\TravelRequest\Output\TravelRequestOutput;
+use Application\TravelRequest\Port\TravelRequestQueries;
 use Domain\Shared\Exception\InvalidIdentifier;
 use Domain\TravelRequest\Exception\TravelRequestNotFound;
-use Domain\TravelRequest\Repository\TravelRequestRepository;
 use Domain\TravelRequest\ValueObject\TravelRequestId;
-use Domain\TravelRequest\ValueObject\UserId;
 
 final readonly class GetTravelRequestUseCase
 {
     public function __construct(
-        private TravelRequestRepository $travelRequests,
+        private TravelRequestQueries $queries,
     ) {}
 
     /**
@@ -26,13 +25,17 @@ final readonly class GetTravelRequestUseCase
      */
     public function execute(GetTravelRequestInput $input): TravelRequestOutput
     {
-        $travelRequest = $this->travelRequests->get(id: TravelRequestId::fromString(id: $input->travelRequestId));
-        $isOwnRequest = $travelRequest->requesterId->equals(other: UserId::fromString(id: $input->viewerId));
+        $travelRequestId = TravelRequestId::fromString(id: $input->travelRequestId);
+        $travelRequest = $this->queries->find(id: $travelRequestId);
 
-        if (! $isOwnRequest && ! $input->isViewerAdmin) {
-            throw TravelRequestNotFound::withId(id: $travelRequest->id);
+        if ($travelRequest === null) {
+            throw TravelRequestNotFound::withId(id: $travelRequestId);
         }
 
-        return TravelRequestOutput::fromEntity(travelRequest: $travelRequest);
+        if ($travelRequest->requester->id !== $input->viewerId && ! $input->isViewerAdmin) {
+            throw TravelRequestNotFound::withId(id: $travelRequestId);
+        }
+
+        return $travelRequest;
     }
 }

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Application\TravelRequest\UseCase;
 
 use Application\TravelRequest\Input\ApproveTravelRequestInput;
-use Application\TravelRequest\Output\TravelRequestOutput;
 use Application\TravelRequest\UseCase\ApproveTravelRequestUseCase;
 use Domain\TravelRequest\Entity\TravelRequest;
 use Domain\TravelRequest\Enum\TravelRequestStatus;
@@ -18,6 +17,7 @@ use PHPUnit\Framework\TestCase;
 use Tests\Support\Shared\Port\FrozenClock;
 use Tests\Support\Shared\Port\SpyDomainEventPublisher;
 use Tests\Support\TravelRequest\Fixture\TravelRequestMother as Mother;
+use Tests\Support\TravelRequest\Port\InMemoryTravelRequestQueries;
 use Tests\Support\TravelRequest\Repository\InMemoryTravelRequestRepository;
 
 final class ApproveTravelRequestUseCaseTest extends TestCase
@@ -35,6 +35,7 @@ final class ApproveTravelRequestUseCaseTest extends TestCase
         $this->events = new SpyDomainEventPublisher();
         $this->useCase = new ApproveTravelRequestUseCase(
             travelRequests: $this->travelRequests,
+            queries: new InMemoryTravelRequestQueries(travelRequests: $this->travelRequests),
             events: $this->events,
             clock: $clock,
         );
@@ -52,7 +53,7 @@ final class ApproveTravelRequestUseCaseTest extends TestCase
 
         $stored = $this->storedTravelRequest();
 
-        self::assertEquals(TravelRequestOutput::fromEntity(travelRequest: $stored), $changed);
+        self::assertEquals(Mother::output(travelRequest: $stored), $changed);
         self::assertSame(TravelRequestStatus::Approved, $stored->status);
         self::assertSame(Mother::ADMIN_ID, $stored->decidedBy?->toString());
         self::assertSame(TravelRequest::FIRST_VERSION + 1, $stored->version);
