@@ -14,6 +14,7 @@ use Domain\TravelRequest\Exception\TravelRequestNotFound;
 use Domain\TravelRequest\ValueObject\TravelRequestId;
 use Illuminate\Cache\CacheManager;
 use Illuminate\Contracts\Cache\Repository as Cache;
+use Illuminate\Database\ConnectionInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Infrastructure\TravelRequest\Cache\CachedTravelRequestQueries;
 use Infrastructure\TravelRequest\Cache\CacheInvalidatingTravelRequestRepository;
@@ -59,6 +60,7 @@ final class TravelRequestCacheTest extends LaravelTestCase
         $this->travelRequests = new CacheInvalidatingTravelRequestRepository(
             travelRequests: $this->uncachedTravelRequests,
             cache: $cache,
+            transactions: $this->app->make('db.transactions'),
         );
         $this->queries = new CachedTravelRequestQueries(
             queries: new DatabaseTravelRequestQueries(),
@@ -120,6 +122,29 @@ final class TravelRequestCacheTest extends LaravelTestCase
         $found = $this->queries->find(id: $travelRequest->id);
 
         self::assertSame(TravelRequestStatus::Approved, $found?->status);
+    }
+
+    public function test_InsideATransactionTheCacheIsDroppedOnlyAtTheCommit(): void
+    {
+        $this->travelRequests->add(travelRequest: Mother::requested());
+        $id = TravelRequestId::fromString(id: Mother::TRAVEL_REQUEST_ID);
+        $this->queries->find(id: $id);
+        $travelRequest = $this->approvedFromStorage();
+        $statusSeenBeforeTheCommit = null;
+
+        $this->app->make(ConnectionInterface::class)
+            ->transaction(function () use ($travelRequest, $id, &$statusSeenBeforeTheCommit): void {
+                $this->travelRequests->update(
+                    travelRequest: $travelRequest,
+                    loadedVersion: TravelRequest::FIRST_VERSION,
+                );
+                $statusSeenBeforeTheCommit = $this->queries->find(id: $id)?->status;
+            });
+
+        $statusAfterTheCommit = $this->queries->find(id: $id)?->status;
+
+        self::assertSame(TravelRequestStatus::Requested, $statusSeenBeforeTheCommit);
+        self::assertSame(TravelRequestStatus::Approved, $statusAfterTheCommit);
     }
 
     public function test_ListIsServedFromTheCacheUntilAWriteItCanSee(): void
