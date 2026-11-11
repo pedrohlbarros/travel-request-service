@@ -1,6 +1,6 @@
 # Fase 03 — API de pedidos de viagem
 
-- **Status:** Aprovado para início
+- **Status:** Concluído (2026-11-10)
 - **ADRs:** 0003, 0004, 0006, 0008, 0015, 0016, 0017, 0028, 0033, 0034
 
 ## Objetivo
@@ -33,4 +33,4 @@ Expor o context TravelRequest via REST, com todos os recursos do Laravel exigido
 4. Conferir formato Problem Details de cada erro.
 
 ## Aprovação
-- [ ] Aprovado pelo usuário em: ____
+- [x] Aprovado pelo usuário em: 2026-11-10
