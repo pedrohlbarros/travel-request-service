@@ -9,6 +9,7 @@ FROM php:${PHP_VERSION}-cli-alpine AS base
 
 ARG SWOOLE_VERSION=6.2.5
 ARG PHPREDIS_VERSION=6.3.0
+ARG OPENTELEMETRY_VERSION=1.5.0
 ARG UID=1000
 ARG GID=1000
 
@@ -17,7 +18,8 @@ RUN set -eux; \
     docker-php-ext-install -j"$(nproc)" pcntl pdo_mysql sockets; \
     pecl install -D 'enable-sockets="yes" enable-openssl="yes" enable-brotli="yes"' "swoole-${SWOOLE_VERSION}"; \
     pecl install "redis-${PHPREDIS_VERSION}"; \
-    docker-php-ext-enable swoole redis; \
+    pecl install "opentelemetry-${OPENTELEMETRY_VERSION}"; \
+    docker-php-ext-enable swoole redis opentelemetry; \
     runDeps="$(scanelf --needed --nobanner --format '%n#p' --recursive /usr/local \
         | tr ',' '\n' | sort -u \
         | awk 'system("[ -e /usr/local/lib/" $1 " ]") == 0 { next } { print "so:" $1 }')"; \
