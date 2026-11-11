@@ -9,8 +9,8 @@ As portas e as credenciais vêm do `.env`. Os exemplos abaixo usam os valores pa
 | Comando | O que faz |
 |---|---|
 | `make setup` | Primeira execução: cria o `.env`, builda a imagem, sobe os containers, roda o `composer install`, gera a `APP_KEY`, sincroniza a réplica, aplica as migrations, gera as chaves JWT e instala os git hooks. Pode ser repetido. |
-| `make up` | Sobe o perfil padrão e espera os containers ficarem saudáveis |
-| `make down` | Remove os containers; os volumes (dados) ficam |
+| `make up` | Sobe o perfil padrão e espera os containers ficarem saudáveis. Os outros perfis sobem pelos próprios alvos (`make obs`, `make docs`, `make load-*`). |
+| `make down` | Remove os containers de todos os perfis (padrão, obs, load, docs e debian); os volumes (dados) ficam |
 | `make restart` | Reinicia todos os serviços |
 | `make build` | Rebuilda a imagem do app, depois de mudar o `Dockerfile` ou a configuração do PHP |
 | `make ps` | Estado e saúde de cada container |
