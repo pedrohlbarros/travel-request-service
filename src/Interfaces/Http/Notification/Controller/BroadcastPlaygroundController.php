@@ -11,7 +11,8 @@ use Illuminate\Contracts\View\View;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
- * A bare page that subscribes to the caller's private channel, to watch notifications arrive. Local only.
+ * The live notifications page: sign in with a demo account, list the notifications and watch decisions arrive
+ * on the private channel. Local only.
  */
 final readonly class BroadcastPlaygroundController
 {
