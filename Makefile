@@ -83,9 +83,9 @@ setup: ## First run: .env, build, start, dependencies, app key, migrations, JWT 
 	$(COMPOSE) up -d --wait mysql mysql-replica redis rabbitmq mailpit
 	$(COMPOSE) run --rm --no-deps app composer install --no-interaction
 	@grep -q '^APP_KEY=base64' .env || $(COMPOSE) run --rm --no-deps app php artisan key:generate --ansi
+	@$(MAKE) --no-print-directory db-replica-sync
 	$(COMPOSE) up -d --wait
 	$(PHP) artisan migrate --force
-	@$(MAKE) --no-print-directory db-replica-sync
 	$(PHP) artisan identity:keys:generate
 	$(EXEC) vendor/bin/captainhook install --only-enabled --force --no-interaction
 
